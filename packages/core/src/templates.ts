@@ -1,4 +1,5 @@
-import type { Lang } from './messages';
+import { catalogue } from './i18n/catalogue';
+import type { Lang, OutboundMessage } from './messages';
 
 /**
  * Registry of WhatsApp templates (business-initiated messages outside the 24-hour window). Every template here must
@@ -97,3 +98,28 @@ export const TEMPLATES = {
 } as const satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof TEMPLATES;
+
+
+/**
+ * Builds a template message. Button payloads become `${payload}:${ref}` so replies carry the entity id.
+ * `preview` is the fully rendered body (used by the simulator and SMS later). Meta forbids newlines in parameters,
+ * so parameters are flattened.
+ */
+export function buildTemplate(key: TemplateKey, lang: Lang, params: string[], ref?: string): OutboundMessage {
+  const def: TemplateDef = TEMPLATES[key];
+  if (params.length !== def.params.length) throw new Error(`Template ${def.name} needs ${def.params.length} params`);
+  const flat = params.map((p) => p.replace(/[\n\t]+/g, ' ').replace(/ {4,}/g, '   ').trim());
+  const body = (catalogue as Record<string, Record<Lang, string>>)[def.bodyKey]![lang];
+  const preview = body.replace(/\{(\d)\}/g, (_m, i: string) => flat[Number(i) - 1] ?? '');
+  return {
+    kind: 'template',
+    template: def.name,
+    lang,
+    params: flat,
+    buttons: def.buttons.map((b) => ({
+      id: ref ? `${b.payload}:${ref}` : b.payload,
+      title: (catalogue as Record<string, Record<Lang, string>>)[b.titleKey]![lang],
+    })),
+    preview,
+  };
+}

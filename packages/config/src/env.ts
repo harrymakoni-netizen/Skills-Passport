@@ -84,7 +84,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     const file = findRootEnv(process.cwd());
     if (file) loadDotenv({ path: file, quiet: true });
   }
-  const parsed = envSchema.safeParse(source);
+  // Empty values in .env mean "not set".
+  const clean = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== undefined && v !== ''));
+  const parsed = envSchema.safeParse(clean);
   if (!parsed.success) {
     const lines = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment:\n${lines}`);

@@ -2,7 +2,9 @@
   "name": "skills-passport",
   "private": true,
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
@@ -13,7 +15,8 @@
     "db:migrate": "pnpm --filter @sp/db migrate",
     "db:seed": "pnpm --filter @sp/db seed",
     "demo:reset": "pnpm --filter @sp/db demo:reset",
-    "e2e": "pnpm --filter @sp/web e2e"
+    "e2e": "pnpm --filter @sp/web e2e",
+    "setup:env": "node scripts/setup-env.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
@@ -28,6 +31,15 @@
     "@vitest/coverage-v8": "^3.2.4"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma", "argon2", "sharp", "esbuild", "@nestjs/core", "msgpackr-extract"]
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "argon2",
+      "sharp",
+      "esbuild",
+      "@nestjs/core",
+      "msgpackr-extract"
+    ]
   }
 }

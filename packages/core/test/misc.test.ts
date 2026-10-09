@@ -126,3 +126,17 @@ describe('config and time', () => {
     expect(clip('abcdefghijklmnopqrstuvwxyz', 10)).toBe('abcdefghi…');
   });
 });
+
+describe('buildTemplate', () => {
+  it('renders the client confirmation template', async () => {
+    const { buildTemplate } = await import('../src/templates');
+    const m = buildTemplate('client_job_confirmation', 'en', ['Tendai', 'Battery and inverter installation', '12 Nov', 'https://sp.test/c/abc'], 'conf1');
+    expect(m.kind).toBe('template');
+    if (m.kind !== 'template') return;
+    expect(m.preview).toBe("Skills Passport: Tendai says they did 'Battery and inverter installation' for you on 12 Nov. Was this work done?\nRate the work and see photos: https://sp.test/c/abc");
+    expect(m.buttons.map((b) => b.id)).toEqual(['cc_yes:conf1', 'cc_no:conf1', 'cc_stop:conf1']);
+    expect(m.buttons[0]!.title).toBe('Yes, it was done');
+    expect(buildTemplate('artisan_job_update', 'en', ['J-1', 'line\n\nbreak']).kind).toBe('template');
+    expect(() => buildTemplate('artisan_job_update', 'en', ['x'])).toThrow();
+  });
+});

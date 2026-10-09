@@ -1,0 +1,831 @@
+// Skills Passport data model — derived from SPEC section 11 and docs/PLAN.md section 3.
+// Encrypted columns (suffix Enc) hold AES-256-GCM ciphertext; hashed lookups (suffix Hash) are HMAC-SHA256.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Language {
+  en
+  sn
+  nd
+}
+
+enum Level {
+  starter
+  bronze
+  silver
+  gold
+}
+
+enum ArtisanStatus {
+  onboarding
+  active
+  frozen
+  deleted
+}
+
+enum HowLearned {
+  apprenticeship
+  family
+  self_taught
+  college
+  other
+}
+
+enum UserRole {
+  admin
+  verifier
+  agent
+  buyer
+}
+
+enum JobStatus {
+  draft
+  submitted
+  awaiting_client
+  client_confirmed
+  client_disputed
+  client_expired
+  under_review
+  verified
+  needs_improvement
+  rejected
+  closed
+}
+
+enum MediaKind {
+  photo_before
+  photo_after
+  video
+  voice
+}
+
+enum ConfirmationChannel {
+  whatsapp
+  agent
+}
+
+enum ConfirmationResponse {
+  confirmed
+  disputed
+  expired
+}
+
+enum CompetencySource {
+  ai
+  verifier
+}
+
+enum JobCompetencyStatus {
+  suggested
+  confirmed
+  removed
+}
+
+enum ReviewQuality {
+  meets
+  needs_improvement
+  reject
+}
+
+enum VerifierStatus {
+  pending
+  active
+  suspended
+}
+
+enum BuyerType {
+  business
+  ngo
+  household
+  government
+}
+
+enum WorkRequestStatus {
+  sent
+  accepted
+  declined
+  expired
+}
+
+enum WorkRequestOutcome {
+  hired
+  not_hired
+  unknown
+}
+
+enum ReportStatus {
+  open
+  upheld
+  dismissed
+}
+
+enum FlagEntity {
+  job
+  client
+  verifier
+  artisan
+}
+
+enum FlagSeverity {
+  soft
+  standard
+  high
+}
+
+enum FlagStatus {
+  open
+  upheld
+  cleared
+}
+
+enum ConsentKind {
+  core
+  sensitive_demographics
+  public_badge
+  lender
+}
+
+enum DeliveryStatus {
+  queued
+  sent
+  delivered
+  read
+  failed
+  undeliverable
+}
+
+model Area {
+  id       String  @id @default(cuid())
+  name     String
+  city     String
+  cityCode String  @map("city_code")
+  province String
+  lat      Float?
+  lng      Float?
+  active   Boolean @default(true)
+
+  artisans     Artisan[]
+  jobs         Job[]
+  workRequests WorkRequest[]
+  verifiers    Verifier[]
+  agents       FieldAgent[]
+
+  @@unique([city, name])
+  @@index([cityCode])
+  @@map("areas")
+}
+
+model PassportSequence {
+  cityCode String @id @map("city_code")
+  next     Int    @default(1)
+
+  @@map("passport_sequences")
+}
+
+model Trade {
+  id     String  @id @default(cuid())
+  code   String  @unique
+  nameEn String  @map("name_en")
+  nameSn String  @map("name_sn")
+  nameNd String  @map("name_nd")
+  active Boolean @default(true)
+
+  units          CompetencyUnit[]
+  jobTypes       JobType[]
+  artisans       ArtisanTrade[]
+  verifiers      VerifierTrade[]
+  jobs           Job[]
+  endorsements   Endorsement[]
+
+  @@map("trades")
+}
+
+model CompetencyUnit {
+  id               String  @id @default(cuid())
+  tradeId          String  @map("trade_id")
+  code             String  @unique
+  /// { en, sn, nd }
+  title            Json
+  description      String
+  evidenceGuidance String  @map("evidence_guidance")
+  classLevel       String? @map("class_level")
+  standardRef      String? @map("standard_ref")
+  sortOrder        Int     @default(0) @map("sort_order")
+  active           Boolean @default(true)
+
+  trade        Trade           @relation(fields: [tradeId], references: [id])
+  jobTypes     JobTypeUnit[]
+  competencies JobCompetency[]
+
+  @@index([tradeId])
+  @@map("competency_units")
+}
+
+model JobType {
+  id               String  @id @default(cuid())
+  tradeId          String  @map("trade_id")
+  key              String  @unique
+  /// { en, sn, nd }
+  name             Json
+  needsBeforePhoto Boolean @default(false) @map("needs_before_photo")
+  sortOrder        Int     @default(0) @map("sort_order")
+  active           Boolean @default(true)
+
+  trade Trade         @relation(fields: [tradeId], references: [id])
+  units JobTypeUnit[]
+  jobs  Job[]
+
+  @@index([tradeId])
+  @@map("job_types")
+}
+
+model JobTypeUnit {
+  jobTypeId String @map("job_type_id")
+  unitId    String @map("unit_id")
+
+  jobType JobType        @relation(fields: [jobTypeId], references: [id], onDelete: Cascade)
+  unit    CompetencyUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@id([jobTypeId, unitId])
+  @@map("job_type_units")
+}
+
+model Artisan {
+  id                String        @id @default(cuid())
+  passportCode      String        @unique @map("passport_code")
+  displayName       String        @map("display_name")
+  firstName         String        @map("first_name")
+  showFullName      Boolean       @default(false) @map("show_full_name")
+  areaId            String        @map("area_id")
+  areaPending       Boolean       @default(false) @map("area_pending")
+  level             Level         @default(starter)
+  levelFrozen       Boolean       @default(false) @map("level_frozen")
+  trustScore        Int           @default(88) @map("trust_score")
+  status            ArtisanStatus @default(active)
+  language          Language      @default(en)
+  birthYear         Int?          @map("birth_year")
+  experienceYears   Int?          @map("experience_years")
+  howLearned        HowLearned?   @map("how_learned")
+  gender            String?
+  disability        String?
+  publicBadges      String[]      @default([]) @map("public_badges")
+  profilePhotoKey   String?       @map("profile_photo_key")
+  enrolledByAgentId String?       @map("enrolled_by_agent_id")
+  joinedAt          DateTime      @default(now()) @map("joined_at")
+  deletedAt         DateTime?     @map("deleted_at")
+  purgeAfter        DateTime?     @map("purge_after")
+  /// Pseudonymous id used in analytics events (HMAC of id).
+  pseudonym         String        @unique
+
+  area          Area           @relation(fields: [areaId], references: [id])
+  pii           ArtisanPii?
+  trades        ArtisanTrade[]
+  consents      Consent[]
+  jobs          Job[]
+  endorsements  Endorsement[]
+  workRequests  WorkRequest[]
+  clientReports ClientReport[]
+  levelHistory  LevelHistory[]
+  conflicts     VerifierConflict[]
+  enrolledBy    FieldAgent?    @relation(fields: [enrolledByAgentId], references: [id])
+
+  @@index([areaId, level])
+  @@index([status, level])
+  @@map("artisans")
+}
+
+model ArtisanTrade {
+  artisanId String  @map("artisan_id")
+  tradeId   String  @map("trade_id")
+  primary   Boolean @default(false)
+
+  artisan Artisan @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  trade   Trade   @relation(fields: [tradeId], references: [id])
+
+  @@id([artisanId, tradeId])
+  @@index([tradeId])
+  @@map("artisan_trades")
+}
+
+model ArtisanPii {
+  artisanId         String @id @map("artisan_id")
+  fullNameEnc       Bytes  @map("full_name_enc")
+  phoneEnc          Bytes  @map("phone_enc")
+  phoneHash         String @unique @map("phone_hash")
+  trustedContactEnc Bytes? @map("trusted_contact_enc")
+
+  artisan Artisan @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  @@map("artisan_pii")
+}
+
+model Consent {
+  id          String      @id @default(cuid())
+  artisanId   String      @map("artisan_id")
+  kind        ConsentKind
+  textVersion String      @map("text_version")
+  language    Language
+  channel     String
+  grantedAt   DateTime    @map("granted_at")
+  revokedAt   DateTime?   @map("revoked_at")
+  /// e.g. residency confirmation
+  details     Json?
+
+  artisan Artisan @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  @@index([artisanId, kind])
+  @@map("consents")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  role          UserRole
+  name          String
+  emailHash     String?   @unique @map("email_hash")
+  emailEnc      Bytes?    @map("email_enc")
+  phoneHash     String?   @unique @map("phone_hash")
+  phoneEnc      Bytes?    @map("phone_enc")
+  passwordHash  String    @map("password_hash")
+  totpSecretEnc Bytes?    @map("totp_secret_enc")
+  totpEnabledAt DateTime? @map("totp_enabled_at")
+  active        Boolean   @default(true)
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  verifier Verifier?
+  agent    FieldAgent?
+  buyer    Buyer?
+
+  @@map("users")
+}
+
+model FieldAgent {
+  id     String  @id @default(cuid())
+  userId String  @unique @map("user_id")
+  name   String
+  areaId String? @map("area_id")
+  active Boolean @default(true)
+
+  user     User           @relation(fields: [userId], references: [id])
+  area     Area?          @relation(fields: [areaId], references: [id])
+  jobs     Job[]
+  enrolled Artisan[]
+  followUps Confirmation[]
+  tasks    AgentTask[]
+
+  @@map("field_agents")
+}
+
+model AgentTask {
+  id          String    @id @default(cuid())
+  kind        String
+  artisanId   String?   @map("artisan_id")
+  jobId       String?   @map("job_id")
+  note        String?
+  assignedTo  String?   @map("assigned_to")
+  status      String    @default("open")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  agent FieldAgent? @relation(fields: [assignedTo], references: [id])
+
+  @@index([status, createdAt])
+  @@map("agent_tasks")
+}
+
+model Verifier {
+  id              String         @id @default(cuid())
+  userId          String         @unique @map("user_id")
+  name            String
+  areaId          String?        @map("area_id")
+  yearsExperience Int            @map("years_experience")
+  status          VerifierStatus @default(pending)
+  approvedById    String?        @map("approved_by_id")
+  bio             String?
+
+  user         User               @relation(fields: [userId], references: [id])
+  area         Area?              @relation(fields: [areaId], references: [id])
+  trades       VerifierTrade[]
+  conflicts    VerifierConflict[]
+  reviews      Review[]
+  endorsements Endorsement[]
+  demos        DemonstrationRequest[]
+
+  @@map("verifiers")
+}
+
+model VerifierTrade {
+  verifierId String @map("verifier_id")
+  tradeId    String @map("trade_id")
+
+  verifier Verifier @relation(fields: [verifierId], references: [id], onDelete: Cascade)
+  trade    Trade    @relation(fields: [tradeId], references: [id])
+
+  @@id([verifierId, tradeId])
+  @@map("verifier_trades")
+}
+
+model VerifierConflict {
+  verifierId String   @map("verifier_id")
+  artisanId  String   @map("artisan_id")
+  reason     String
+  declaredAt DateTime @default(now()) @map("declared_at")
+
+  verifier Verifier @relation(fields: [verifierId], references: [id], onDelete: Cascade)
+  artisan  Artisan  @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  @@id([verifierId, artisanId])
+  @@map("verifier_conflicts")
+}
+
+model Client {
+  id           String    @id @default(cuid())
+  phoneHash    String    @unique @map("phone_hash")
+  phoneEnc     Bytes     @map("phone_enc")
+  nameEnc      Bytes?    @map("name_enc")
+  firstSeenAt  DateTime  @default(now()) @map("first_seen_at")
+  firstArtisanId String? @map("first_artisan_id")
+  language     Language  @default(en)
+  optedOut     Boolean   @default(false) @map("opted_out")
+  optedOutAt   DateTime? @map("opted_out_at")
+  reportsCount Int       @default(0) @map("reports_count")
+  blocked      Boolean   @default(false)
+
+  jobs          Job[]
+  confirmations Confirmation[]
+  reports       ClientReport[]
+
+  @@map("clients")
+}
+
+model Job {
+  id                       String    @id @default(cuid())
+  ref                      String    @unique
+  artisanId                String    @map("artisan_id")
+  tradeId                  String    @map("trade_id")
+  jobTypeId                String    @map("job_type_id")
+  jobDate                  DateTime? @map("job_date") @db.Date
+  areaId                   String?   @map("area_id")
+  lat                      Float?
+  lng                      Float?
+  amountChargedCents       Int?      @map("amount_charged_cents")
+  clientId                 String?   @map("client_id")
+  clientNameEnc            Bytes?    @map("client_name_enc")
+  status                   JobStatus @default(draft)
+  disputed                 Boolean   @default(false)
+  disputeResolvedForArtisan Boolean  @default(false) @map("dispute_resolved_for_artisan")
+  agentAssisted            Boolean   @default(false) @map("agent_assisted")
+  agentId                  String?   @map("agent_id")
+  artisanConfirmedAt       DateTime? @map("artisan_confirmed_at")
+  notes                    String[]  @default([])
+  /// Exact SPEC §12 shape incl. model_version and prompt_version
+  aiSummary                Json?     @map("ai_summary")
+  /// Artisan-corrected summary { summary, source, at }
+  artisanSummary           Json?     @map("artisan_summary")
+  aiStatus                 String    @default("pending") @map("ai_status")
+  summaryConfirmedAt       DateTime? @map("summary_confirmed_at")
+  public                   Boolean   @default(true)
+  flagRules                String[]  @default([]) @map("flag_rules")
+  counted                  Boolean   @default(false)
+  reviewRequired           Boolean   @default(false) @map("review_required")
+  reviewReason             String?   @map("review_reason")
+  assignedVerifierId       String?   @map("assigned_verifier_id")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  submittedAt              DateTime? @map("submitted_at")
+  statusChangedAt          DateTime  @default(now()) @map("status_changed_at")
+  queuedForReviewAt        DateTime? @map("queued_for_review_at")
+
+  artisan       Artisan          @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  trade         Trade            @relation(fields: [tradeId], references: [id])
+  jobType       JobType          @relation(fields: [jobTypeId], references: [id])
+  area          Area?            @relation(fields: [areaId], references: [id])
+  client        Client?          @relation(fields: [clientId], references: [id])
+  agent         FieldAgent?      @relation(fields: [agentId], references: [id])
+  media         JobMedia[]
+  confirmation  Confirmation?
+  competencies  JobCompetency[]
+  review        Review?
+  demos         DemonstrationRequest[]
+  workRequest   WorkRequest?
+
+  @@index([artisanId, status])
+  @@index([tradeId, status, reviewRequired, createdAt])
+  @@index([clientId, createdAt])
+  @@index([status, statusChangedAt])
+  @@map("jobs")
+}
+
+model JobMedia {
+  id              String    @id @default(cuid())
+  jobId           String    @map("job_id")
+  kind            MediaKind
+  providerMediaId String?   @map("provider_media_id")
+  originalKey     String?   @map("original_key")
+  publicKey       String?   @map("public_key")
+  thumbKey        String?   @map("thumb_key")
+  mimeType        String    @map("mime_type")
+  bytes           Int?
+  width           Int?
+  height          Int?
+  durationSec     Int?      @map("duration_sec")
+  phash           String?
+  capturedAt      DateTime? @map("captured_at")
+  exifLat         Float?    @map("exif_lat")
+  exifLng         Float?    @map("exif_lng")
+  qualityScore    Float?    @map("quality_score")
+  qualityProblem  String?   @map("quality_problem")
+  imageChecks     Json?     @map("image_checks")
+  duplicateOfId   String?   @map("duplicate_of_id")
+  public          Boolean   @default(true)
+  status          String    @default("pending")
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  job        Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  transcript Transcript?
+
+  @@index([jobId])
+  @@index([phash])
+  @@map("job_media")
+}
+
+model Transcript {
+  id           String   @id @default(cuid())
+  jobMediaId   String   @unique @map("job_media_id")
+  language     String
+  text         String
+  confidence   Float
+  modelVersion String   @map("model_version")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  media JobMedia @relation(fields: [jobMediaId], references: [id], onDelete: Cascade)
+
+  @@map("transcripts")
+}
+
+model Confirmation {
+  id                String                @id @default(cuid())
+  jobId             String                @unique @map("job_id")
+  clientId          String                @map("client_id")
+  channel           ConfirmationChannel
+  tokenHash         String                @unique @map("token_hash")
+  tokenExpiresAt    DateTime              @map("token_expires_at")
+  tokenUsedAt       DateTime?             @map("token_used_at")
+  sentAt            DateTime?             @map("sent_at")
+  deliveryStatus    DeliveryStatus        @default(queued) @map("delivery_status")
+  remindersSent     Int                   @default(0) @map("reminders_sent")
+  response          ConfirmationResponse?
+  rating            Int?
+  comment           String?
+  respondedAt       DateTime?             @map("responded_at")
+  recordedByAgentId String?               @map("recorded_by_agent_id")
+  /// Demo convenience: raw token kept only when DEV_TOOLS is on, so the simulator can open the rating page.
+  devToken          String?               @map("dev_token")
+
+  job      Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  client   Client      @relation(fields: [clientId], references: [id])
+  agent    FieldAgent? @relation(fields: [recordedByAgentId], references: [id])
+
+  @@index([clientId, respondedAt])
+  @@map("confirmations")
+}
+
+model JobCompetency {
+  jobId      String              @map("job_id")
+  unitId     String              @map("unit_id")
+  source     CompetencySource
+  confidence Float?
+  evidence   String[]            @default([])
+  status     JobCompetencyStatus @default(suggested)
+  reviewerId String?             @map("reviewer_id")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  job  Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  unit CompetencyUnit @relation(fields: [unitId], references: [id])
+
+  @@id([jobId, unitId, source])
+  @@index([unitId])
+  @@map("job_competencies")
+}
+
+model Review {
+  id            String        @id @default(cuid())
+  jobId         String        @unique @map("job_id")
+  verifierId    String        @map("verifier_id")
+  quality       ReviewQuality
+  noteToArtisan String?       @map("note_to_artisan")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  verifier Verifier @relation(fields: [verifierId], references: [id])
+
+  @@index([verifierId, createdAt])
+  @@map("reviews")
+}
+
+model DemonstrationRequest {
+  id         String   @id @default(cuid())
+  jobId      String   @map("job_id")
+  verifierId String   @map("verifier_id")
+  note       String?
+  status     String   @default("requested")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  verifier Verifier @relation(fields: [verifierId], references: [id])
+
+  @@map("demonstration_requests")
+}
+
+model Endorsement {
+  id              String    @id @default(cuid())
+  artisanId       String    @map("artisan_id")
+  verifierId      String    @map("verifier_id")
+  tradeId         String    @map("trade_id")
+  statement       String
+  createdAt       DateTime  @default(now()) @map("created_at")
+  withdrawnAt     DateTime? @map("withdrawn_at")
+  withdrawnReason String?   @map("withdrawn_reason")
+
+  artisan  Artisan  @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  verifier Verifier @relation(fields: [verifierId], references: [id])
+  trade    Trade    @relation(fields: [tradeId], references: [id])
+
+  @@index([artisanId])
+  @@map("endorsements")
+}
+
+model Buyer {
+  id               String    @id @default(cuid())
+  userId           String    @unique @map("user_id")
+  orgName          String    @map("org_name")
+  type             BuyerType
+  verified         Boolean   @default(false)
+  contactNameEnc   Bytes     @map("contact_name_enc")
+  contactPhoneEnc  Bytes     @map("contact_phone_enc")
+  contactPhoneHash String    @map("contact_phone_hash")
+  plan             String?
+
+  user         User          @relation(fields: [userId], references: [id])
+  workRequests WorkRequest[]
+
+  @@index([contactPhoneHash])
+  @@map("buyers")
+}
+
+model WorkRequest {
+  id               String             @id @default(cuid())
+  buyerId          String             @map("buyer_id")
+  artisanId        String             @map("artisan_id")
+  description      String
+  areaId           String             @map("area_id")
+  preferredDates   String             @map("preferred_dates")
+  status           WorkRequestStatus  @default(sent)
+  outcome          WorkRequestOutcome @default(unknown)
+  buyerOutcome     WorkRequestOutcome @default(unknown) @map("buyer_outcome")
+  jobId            String?            @unique @map("job_id")
+  respondedAt      DateTime?          @map("responded_at")
+  followUpAt       DateTime?          @map("follow_up_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  buyer   Buyer   @relation(fields: [buyerId], references: [id])
+  artisan Artisan @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  area    Area    @relation(fields: [areaId], references: [id])
+  job     Job?    @relation(fields: [jobId], references: [id])
+
+  @@index([artisanId, status])
+  @@index([buyerId, createdAt])
+  @@map("work_requests")
+}
+
+model ClientReport {
+  id        String       @id @default(cuid())
+  artisanId String       @map("artisan_id")
+  clientId  String       @map("client_id")
+  reason    String
+  details   String?
+  status    ReportStatus @default(open)
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  artisan Artisan @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
+  @@map("client_reports")
+}
+
+model LevelHistory {
+  id            String   @id @default(cuid())
+  artisanId     String   @map("artisan_id")
+  fromLevel     Level    @map("from_level")
+  toLevel       Level    @map("to_level")
+  reason        Json
+  configVersion Int      @map("config_version")
+  at            DateTime @default(now())
+
+  artisan Artisan @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  @@index([artisanId, at])
+  @@map("level_history")
+}
+
+model FraudFlag {
+  id             String       @id @default(cuid())
+  entity         FlagEntity
+  entityId       String       @map("entity_id")
+  rule           String
+  severity       FlagSeverity
+  reason         String
+  evidence       Json?
+  status         FlagStatus   @default(open)
+  resolvedById   String?      @map("resolved_by_id")
+  resolvedAt     DateTime?    @map("resolved_at")
+  resolutionNote String?      @map("resolution_note")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([status, severity, createdAt])
+  @@index([entity, entityId])
+  @@map("fraud_flags")
+}
+
+model Config {
+  version     Int      @id
+  params      Json
+  activeFrom  DateTime @map("active_from")
+  createdById String?  @map("created_by_id")
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("configs")
+}
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  actorId  String?  @map("actor_id")
+  action   String
+  entity   String
+  entityId String?  @map("entity_id")
+  at       DateTime @default(now())
+  details  Json?
+
+  @@index([entity, entityId])
+  @@index([at])
+  @@map("audit_log")
+}
+
+model InboundMessage {
+  providerMessageId String    @id @map("provider_message_id")
+  channel           String
+  fromHash          String    @map("from_hash")
+  receivedAt        DateTime  @default(now()) @map("received_at")
+  processedAt       DateTime? @map("processed_at")
+
+  @@map("inbound_messages")
+}
+
+model OutboundMessage {
+  id                String         @id @default(cuid())
+  providerMessageId String?        @unique @map("provider_message_id")
+  toHash            String         @map("to_hash")
+  templateName      String?        @map("template_name")
+  purpose           String
+  relatedEntity     String?        @map("related_entity")
+  relatedId         String?        @map("related_id")
+  status            DeliveryStatus @default(queued)
+  error             String?
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  @@index([relatedEntity, relatedId])
+  @@map("outbound_messages")
+}
+
+model MediaUploadRequest {
+  id        String    @id @default(cuid())
+  agentId   String    @map("agent_id")
+  key       String    @unique
+  kind      MediaKind
+  mimeType  String    @map("mime_type")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  @@map("media_upload_requests")
+}
+
+model ProductEvent {
+  id        String   @id @default(cuid())
+  name      String
+  subjectId String   @map("subject_id")
+  props     Json?
+  at        DateTime @default(now())
+
+  @@index([name, at])
+  @@map("product_events")
+}

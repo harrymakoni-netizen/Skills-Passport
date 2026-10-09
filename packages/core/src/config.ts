@@ -104,7 +104,7 @@ export const DEFAULT_CONFIG: RulesConfig = {
     sameClientWindowDays: 30,
     ringMaxArtisans: 5,
     ringWindowDays: 30,
-    phashMaxDistance: 10,
+    phashMaxDistance: 8,
     captureDateMaxDaysBefore: 30,
     locationMaxKm: 15,
     recentRegistrationHours: 24,
