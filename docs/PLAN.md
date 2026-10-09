@@ -1,6 +1,6 @@
 # Skills Passport — build plan (Milestone 0)
 
-Status: **draft for approval**. No code has been written. Source of truth: `docs/SPEC.md` (v1.1, WhatsApp only).
+Status: **approved** — the owner asked to proceed with every proposed default in section 7 (see section 8). Source of truth: `docs/SPEC.md` (v1.1, WhatsApp only).
 `docs/reference/Skills_Passport_Specification_v1.0.pdf` is the earlier v1.0 (SMS-era) version and is kept for reference only.
 Where they differ, v1.1 wins.
 
@@ -725,3 +725,28 @@ Each has a **proposed default** I will use unless you say otherwise.
     Tailwind CSS 4, Vitest 2/3, Playwright. Any constraints (e.g. hosting that fixes a Node version)?
 24. **Branching.** I'm working on `claude/new-session-play15`. Do you want one branch/PR per milestone, or keep
     building on this branch?
+
+---
+
+## 8. Decisions (adopted)
+
+The owner asked to proceed with the proposed defaults for every question in section 7. They are now product rules and are
+implemented in `packages/core` and the default config:
+
+- Client request goes out within a minute; the AI summary is corrected in parallel (Q1).
+- One level per artisan; counts across trades; Gold's 70% rule is met by any one trade (Q2).
+- A disputed job never counts unless an admin resolves the dispute for the artisan (Q3); "open dispute" = unresolved (Q4).
+- Birth year + month asked, only `birthYear` stored (Q5); Zimbabwe residency yes/no in the consent record (Q6).
+- Area list per city plus "not listed" (Q7); passport numbering per city (Q8).
+- Gold span = 90 days between first and last counted job dates (Q9); Silver rating rule needs at least 3 ratings (Q10).
+- "Pre-level review": when every other requirement for the next level is met, new counted jobs are always sampled (Q11).
+- "Recently registered" soft flag interpreted as in Q12; same-client cap on rolling 30 days of confirmation time (Q13).
+- Client block counts distinct reporting artisans (Q14); client language = artisan language (Q15).
+- Rating token consumed by the web form, not the button tap (Q16); agent-assisted jobs wait for the artisan's "this is mine" (Q17).
+- Opted-out / blocked clients → field-agent follow-up (Q18); TOTP required for admin, verifier and agent, optional for buyers (Q19).
+- Colours as proposed (Q20); logo used as the brand mark only (Q21); v1.0 PDF kept as reference (Q22).
+- Library versions: Node 20+, pnpm 10, Turborepo 2, NestJS 11, Next.js 15, Prisma 6, BullMQ 5, Tailwind 4, Vitest 3 (Q23).
+- Work continues on the `claude/new-session-play15` branch (Q24).
+
+Environment note: when Docker is not available (e.g. a cloud dev container), `STORAGE_DRIVER=fs` stores objects on local
+disk behind the same `ObjectStorage` interface; MinIO remains the default in `docker-compose.yml`.
