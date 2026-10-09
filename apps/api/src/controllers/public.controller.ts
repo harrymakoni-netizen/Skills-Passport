@@ -8,6 +8,7 @@ import {
   listTrades,
   passportCardPng,
   passportOgPng,
+  passportQrSvg,
   passportQrPng,
   searchDirectory,
   submitConfirmationPage,
@@ -67,10 +68,16 @@ export class PublicController {
   }
 
   @Get('passports/:code/qr.png')
-  async qr(@Param('code') code: string, @Res() res: Response) {
+  async qr(@Param('code') code: string, @Query('size') size: string | undefined, @Res() res: Response) {
     if (!isPassportCode(code) || !(await this.ctx.prisma.artisan.findFirst({ where: { passportCode: code, status: { not: 'deleted' } } }))) throw new NotFoundException();
-    const png = await passportQrPng(this.ctx, code);
+    const png = await passportQrPng(this.ctx, code, Math.min(720, Math.max(160, Number(size) || 720)));
     res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' }).send(png);
+  }
+
+  @Get('passports/:code/qr.svg')
+  async qrSvg(@Param('code') code: string, @Res() res: Response) {
+    if (!isPassportCode(code) || !(await this.ctx.prisma.artisan.findFirst({ where: { passportCode: code, status: { not: 'deleted' } } }))) throw new NotFoundException();
+    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' }).send(await passportQrSvg(this.ctx, code));
   }
 
   @Get('passports/:code/card.png')

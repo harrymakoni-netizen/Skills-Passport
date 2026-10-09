@@ -12,6 +12,7 @@ const config: NextConfig = {
       { source: '/api/:path*', destination: `${api}/:path*` },
       { source: '/media/:path*', destination: `${api}/media/:path*` },
       { source: '/p/:code/qr.png', destination: `${api}/public/passports/:code/qr.png` },
+      { source: '/p/:code/qr.svg', destination: `${api}/public/passports/:code/qr.svg` },
       { source: '/p/:code/card.png', destination: `${api}/public/passports/:code/card.png` },
       { source: '/p/:code/og.png', destination: `${api}/public/passports/:code/og.png` },
     ];

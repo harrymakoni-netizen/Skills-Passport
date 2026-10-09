@@ -187,8 +187,13 @@ export default async function PassportPage({ params, searchParams }: Props) {
               {T('p.share')}
             </h2>
             <div className="flex items-center gap-4">
-              <img src={`/p/${p.code}/qr.png`} alt={T('p.scan')} width={112} height={128} loading="lazy" className="h-32 w-28 rounded-sm border border-rule bg-paper object-contain p-1" />
-              <p className="text-sm text-muted">{T('p.scan')}</p>
+              <a href={`/p/${p.code}/qr.png`} download={`${p.code}-qr.png`} className="shrink-0">
+                <img src={`/p/${p.code}/qr.svg`} alt={T('p.scan')} width={112} height={112} loading="lazy" className="size-28 rounded-sm border border-rule bg-paper" />
+              </a>
+              <p className="flex flex-col gap-1 text-sm text-muted">
+                {T('p.scan')}
+                <span className="serial text-xs text-text">{p.code}</span>
+              </p>
             </div>
             <ShareBar url={p.url} text={shareText} labels={{ whatsapp: T('p.share_whatsapp'), copy: T('p.copy_link'), copied: T('p.copied') }} />
           </section>

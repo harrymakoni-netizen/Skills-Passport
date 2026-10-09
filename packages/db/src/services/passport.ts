@@ -128,7 +128,7 @@ export async function passportQrPng(ctx: ServiceContext, code: string, size = 72
     <rect width="720" height="820" fill="#F7F4EE"/>${inner}
     <text x="360" y="752" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="40" letter-spacing="6" fill="#141414">${esc(code)}</text>
     <text x="360" y="796" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="22" letter-spacing="4" fill="#5E6660">SKILLS PASSPORT</text></svg>`;
-  return sharp(Buffer.from(svg)).resize({ width: size }).png().toBuffer();
+  return sharp(Buffer.from(svg)).resize({ width: size }).png({ compressionLevel: 9, palette: true }).toBuffer();
 }
 
 function guilloche(cx: number, cy: number, r: number, color: string, opacity: number): string {
@@ -182,6 +182,11 @@ export async function passportCardPng(ctx: ServiceContext, code: string, lang: L
 /** Text body for "Share my passport". */
 export function shareText(lang: Lang, p: PublicPassport) {
   return t(lang, 'share.text', { name: p.displayName, trade: p.trades[0]?.name[lang] ?? '', level: levelName(lang, p.level), link: p.url });
+}
+
+/** Compact SVG QR for the passport page (crisp at any size, ~3 KB). */
+export async function passportQrSvg(ctx: ServiceContext, code: string): Promise<string> {
+  return QRCode.toString(`${ctx.publicBaseUrl}/p/${code}`, { type: 'svg', errorCorrectionLevel: 'M', margin: 1, color: { dark: '#0E4334', light: '#F7F4EE' } });
 }
 
 /** 1200×630 Open Graph image so a shared WhatsApp link previews like a document, not a generic site card. */
