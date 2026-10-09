@@ -1,0 +1,134 @@
+/*
+ * Skills Passport design tokens (docs/DESIGN.md). Tailwind v4 theme: the default palette and type scale are cleared so
+ * only these tokens exist — one ink, one paper, one accent, six type sizes.
+ */
+@theme {
+  --color-*: initial;
+  --color-ink-950: #082a20;
+  --color-ink-900: #0e4334;
+  --color-ink-800: #1a5442;
+  --color-ink-700: #2f6b4f;
+  --color-ink-300: #9cc2b0;
+  --color-ink-100: #e3ece7;
+  --color-ink-50: #f0f5f2;
+  --color-paper: #f7f4ee;
+  --color-raised: #ffffff;
+  --color-sunk: #efebe2;
+  --color-rule: #ddd6c8;
+  --color-rule-strong: #c8bfae;
+  --color-text: #141414;
+  --color-muted: #5e6660;
+  --color-faint: #8a8f8a;
+  --color-accent: #9a5419;
+  --color-accent-mark: #e16e18;
+  --color-accent-50: #f6eadf;
+  --color-bronze: #8c5a2b;
+  --color-bronze-50: #f3e8dc;
+  --color-silver: #6b7176;
+  --color-silver-50: #eceef0;
+  --color-gold: #8a6a1f;
+  --color-gold-50: #f4ecd8;
+  --color-success: #2f6b4f;
+  --color-success-50: #e3ece7;
+  --color-warning: #8a6a1f;
+  --color-warning-50: #f4ecd8;
+  --color-danger: #9b2c2c;
+  --color-danger-50: #f6e3e1;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-*: initial;
+  --font-display: var(--font-fraunces), 'Iowan Old Style', Georgia, serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Six sizes only (DESIGN.md). */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 2.125rem;
+  --text-display: clamp(2.5rem, 1.9rem + 2.4vw, 3.5rem);
+  --text-display--line-height: 1.08;
+
+  --radius-*: initial;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  --shadow-*: initial;
+  --shadow-overlay: 0 8px 24px rgb(20 20 20 / 0.08), 0 1px 2px rgb(20 20 20 / 0.06);
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade: fade 180ms var(--ease-out);
+  --animate-rise: rise 200ms var(--ease-out);
+  --animate-shimmer: shimmer 1.4s linear infinite;
+
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--color-ink-100);
+    color: var(--color-ink-950);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink-700);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .serial {
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+  }
+  .smallcaps {
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

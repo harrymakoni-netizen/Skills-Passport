@@ -748,5 +748,11 @@ implemented in `packages/core` and the default config:
 - Library versions: Node 20+, pnpm 10, Turborepo 2, NestJS 11, Next.js 15, Prisma 6, BullMQ 5, Tailwind 4, Vitest 3 (Q23).
 - Work continues on the `claude/new-session-play15` branch (Q24).
 
+Decision made during the build (Q25, flagged for the owner's review): SPEC 5 reviews the first 3 counted jobs of every
+artisan and SPEC 4.10 says `under_review` jobs do not count, which together would keep every new artisan at zero
+confirmed jobs until a verifier reviews them — at odds with "useful from the first verified job". A client-confirmed
+job picked by *routine* sampling therefore keeps counting while it waits for review; flagged or disputed jobs do not
+count until a reviewer decides, and a rejected job stops counting (levels can go down).
+
 Environment note: when Docker is not available (e.g. a cloud dev container), `STORAGE_DRIVER=fs` stores objects on local
 disk behind the same `ObjectStorage` interface; MinIO remains the default in `docker-compose.yml`.

@@ -43,6 +43,8 @@ export async function evaluateArtisan(ctx: ServiceContext, artisanId: string): P
     confirmedAt: j.confirmation?.response === 'confirmed' ? (j.confirmation.respondedAt ?? j.statusChangedAt) : j.status === 'client_confirmed' ? j.statusChangedAt : null,
     disputed: j.disputed,
     disputeResolvedForArtisan: j.disputeResolvedForArtisan,
+    clientConfirmed: j.confirmation?.response === 'confirmed',
+    flagged: j.flagRules.length > 0,
     jobDate: j.jobDate ?? j.createdAt,
     rating: j.confirmation?.rating ?? null,
     reviewQuality: j.review?.quality ?? null,

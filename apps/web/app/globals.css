@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+@import '@sp/ui/tokens.css';
+@source '../../../packages/ui/src';
+
+@layer components {
+  .prose-copy p + p {
+    margin-top: 0.75rem;
+  }
+}

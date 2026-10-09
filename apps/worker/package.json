@@ -1,0 +1,22 @@
+{
+  "name": "@sp/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "start": "tsx src/main.ts",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@sp/adapters": "workspace:*",
+    "@sp/config": "workspace:*",
+    "@sp/core": "workspace:*",
+    "@sp/db": "workspace:*",
+    "bullmq": "^5.40.0",
+    "ioredis": "^5.6.0"
+  },
+  "devDependencies": { "tsx": "^4.20.0" }
+}

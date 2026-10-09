@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
 
@@ -80,9 +80,13 @@ function findRootEnv(start: string): string | undefined {
 /** Loads and validates the environment once. Throws a readable error listing every invalid variable. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   if (cached && source === process.env) return cached;
+  let root = process.cwd();
   if (source === process.env) {
     const file = findRootEnv(process.cwd());
-    if (file) loadDotenv({ path: file, quiet: true });
+    if (file) {
+      loadDotenv({ path: file, quiet: true });
+      root = dirname(file);
+    }
   }
   // Empty values in .env mean "not set".
   const clean = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== undefined && v !== ''));
@@ -92,6 +96,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new Error(`Invalid environment:\n${lines}`);
   }
   const env = parsed.data;
+  // Relative storage paths are anchored at the repository root (where .env lives), so every process shares them.
+  if (!isAbsolute(env.STORAGE_FS_ROOT)) env.STORAGE_FS_ROOT = join(root, env.STORAGE_FS_ROOT);
   if (env.NODE_ENV === 'production') {
     env.DEV_TOOLS = false;
     if (env.MESSAGING_DRIVER === 'mock') throw new Error('MESSAGING_DRIVER=mock is not allowed in production');

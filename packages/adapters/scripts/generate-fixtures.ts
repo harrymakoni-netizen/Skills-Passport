@@ -53,7 +53,7 @@ const wall = `<linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop offset
 function inverterWall(installed: boolean) {
   const kit = installed
     ? `<rect x="430" y="150" width="300" height="400" rx="14" fill="#f4f5f2" stroke="#b9bcb5" stroke-width="3"/>
-       <rect x="470" y="200" width="220" height="90" rx="6" fill="#1f2a2a"/><text x="490" y="258" font-family="DejaVu Sans Mono" font-size="34" fill="#7fe0a8">230V 50Hz</text>
+       <rect x="470" y="200" width="220" height="90" rx="6" fill="#1f2a2a"/><rect x="492" y="232" width="70" height="26" rx="3" fill="#7fe0a8" opacity="0.85"/><rect x="574" y="232" width="40" height="26" rx="3" fill="#7fe0a8" opacity="0.55"/><rect x="626" y="232" width="44" height="26" rx="3" fill="#7fe0a8" opacity="0.35"/>
        <circle cx="500" cy="340" r="9" fill="#3fb36d"/><circle cx="535" cy="340" r="9" fill="#e0a43a"/><rect x="470" y="380" width="220" height="10" rx="5" fill="#d7d9d3"/>
        <rect x="470" y="405" width="160" height="10" rx="5" fill="#d7d9d3"/>
        <rect x="800" y="210" width="150" height="190" rx="8" fill="#ece9e1" stroke="#a9a59a" stroke-width="3"/>
@@ -66,7 +66,7 @@ function inverterWall(installed: boolean) {
        <rect x="220" y="600" width="30" height="24" fill="#c52b22"/><rect x="360" y="600" width="30" height="24" fill="#1b1b1b"/>
        <rect x="760" y="640" width="230" height="200" rx="10" fill="#3a3f43"/><rect x="770" y="650" width="210" height="40" fill="#4a5056"/>
        <rect x="790" y="620" width="30" height="24" fill="#c52b22"/><rect x="930" y="620" width="30" height="24" fill="#1b1b1b"/>
-       <text x="215" y="760" font-family="DejaVu Sans" font-size="26" fill="#cfd3d6">12V 200Ah GEL</text><text x="785" y="780" font-family="DejaVu Sans" font-size="26" fill="#cfd3d6">12V 200Ah GEL</text>`
+       <rect x="215" y="740" width="170" height="16" rx="3" fill="#cfd3d6" opacity="0.6"/><rect x="785" y="760" width="170" height="16" rx="3" fill="#cfd3d6" opacity="0.6"/>`
     : `<rect x="760" y="230" width="190" height="240" rx="6" fill="#d9d4c7" stroke="#9e988a" stroke-width="3"/>
        <rect x="785" y="270" width="140" height="40" fill="#b2ab9c"/><rect x="785" y="330" width="140" height="40" fill="#b2ab9c"/>
        <path d="M855 470 L855 900" stroke="#8a8476" stroke-width="18"/>
@@ -85,7 +85,7 @@ function gate(finished: boolean) {
     return svg(
       `<rect width="${W}" height="${H}" fill="#5a554c"/><rect width="${W}" height="380" fill="#7b7468"/>
        <rect x="60" y="80" width="300" height="200" fill="#3d3a35"/><circle cx="1000" cy="160" r="70" fill="#d8cdb2" opacity="0.7"/>
-       ${tubes}<rect x="820" y="720" width="260" height="80" rx="8" fill="#2f5d8a"/><text x="840" y="772" font-family="DejaVu Sans" font-size="30" fill="#e8eef5">WELDER</text>`,
+       ${tubes}<rect x="820" y="720" width="260" height="80" rx="8" fill="#2f5d8a"/><rect x="845" y="748" width="150" height="26" rx="4" fill="#e8eef5" opacity="0.7"/>`,
     );
   }
   const bars = Array.from({ length: 18 }, (_, i) => `<rect x="${222 + i * 42}" y="300" width="12" height="430" fill="#141414"/>`).join('');
@@ -128,7 +128,7 @@ function geyser() {
      <polygon points="0,420 1200,260 1200,300 0,470" fill="#6b5a42"/>
      <rect x="180" y="470" width="820" height="40" fill="#b9b6ae"/><rect x="170" y="500" width="840" height="30" fill="#8f8b82"/>
      <rect x="230" y="300" width="720" height="190" rx="95" fill="url(#cyl)"/>
-     <rect x="560" y="330" width="120" height="70" rx="6" fill="#e8e4da"/><text x="572" y="374" font-family="DejaVu Sans" font-size="24" fill="#555">150 L</text>
+     <rect x="560" y="330" width="120" height="70" rx="6" fill="#e8e4da"/><rect x="580" y="356" width="80" height="12" rx="3" fill="#9b968a"/>
      <path d="M950 360 L1060 360 L1060 120" stroke="url(#cu)" stroke-width="18" fill="none"/>
      <path d="M950 430 L1110 430 L1110 120" stroke="url(#cu)" stroke-width="18" fill="none"/>
      <rect x="1040" y="230" width="40" height="50" rx="6" fill="#c9a531"/><rect x="1090" y="300" width="40" height="40" rx="6" fill="#c9a531"/>

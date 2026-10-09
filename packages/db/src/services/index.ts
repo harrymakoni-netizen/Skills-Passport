@@ -17,3 +17,5 @@ export * from './agent';
 export * from './reviews';
 export * from './ports';
 export * from './inbound';
+export * from './admin';
+export * from './directory';

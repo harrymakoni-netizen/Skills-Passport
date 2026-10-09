@@ -10,7 +10,7 @@
     "migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "seed": "dotenv -e ../../.env -- tsx src/seed.ts",
-    "demo:reset": "dotenv -e ../../.env -- prisma migrate reset --force --skip-seed && dotenv -e ../../.env -- tsx src/seed.ts --demo",
+    "demo:reset": "dotenv -e ../../.env -- tsx src/seed.ts --demo",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests",

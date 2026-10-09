@@ -5,7 +5,7 @@ import type { ServiceContext } from './context';
 import { evaluateArtisan } from './levels';
 import { localized, tradeName, type Localized } from './reference';
 
-const COUNTING = ['client_confirmed', 'verified', 'needs_improvement'] as const;
+const COUNTING = ['client_confirmed', 'verified', 'needs_improvement', 'under_review'] as const;
 
 export interface PublicPassport {
   code: string;
@@ -182,4 +182,29 @@ export async function passportCardPng(ctx: ServiceContext, code: string, lang: L
 /** Text body for "Share my passport". */
 export function shareText(lang: Lang, p: PublicPassport) {
   return t(lang, 'share.text', { name: p.displayName, trade: p.trades[0]?.name[lang] ?? '', level: levelName(lang, p.level), link: p.url });
+}
+
+/** 1200×630 Open Graph image so a shared WhatsApp link previews like a document, not a generic site card. */
+export async function passportOgPng(ctx: ServiceContext, code: string): Promise<Buffer | null> {
+  const p = await getPublicPassport(ctx, code);
+  if (!p) return null;
+  const trade = p.trades.map((x) => x.name.en).join(' · ');
+  const rating = p.stats.averageRating ? p.stats.averageRating.toFixed(1) : '—';
+  const levelColor = { starter: '#E3ECE7', bronze: '#D9A77A', silver: '#D3D8DC', gold: '#DCC07C' }[p.level];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+    <rect width="1200" height="630" fill="#0E4334"/>${guilloche(930, 420, 300, '#9CC2B0', 0.16)}
+    <text x="72" y="96" font-family="DejaVu Sans, sans-serif" font-size="22" letter-spacing="7" fill="#9CC2B0">SKILLS PASSPORT</text>
+    <rect x="890" y="64" width="238" height="56" rx="6" fill="none" stroke="${levelColor}" stroke-width="2.5"/>
+    <text x="1009" y="101" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="24" letter-spacing="7" fill="${levelColor}">${esc(levelName('en', p.level).toUpperCase())}</text>
+    <text x="72" y="300" font-family="DejaVu Serif, serif" font-weight="bold" font-size="84" fill="#F7F4EE">${esc(p.displayName)}</text>
+    <text x="72" y="362" font-family="DejaVu Sans, sans-serif" font-size="34" fill="#DCE8E2">${esc(trade)}</text>
+    <text x="72" y="408" font-family="DejaVu Sans, sans-serif" font-size="28" fill="#9CC2B0">${esc(`${p.area}, ${p.city}`)}</text>
+    <line x1="72" y1="470" x2="1128" y2="470" stroke="#9CC2B0" stroke-opacity="0.35" stroke-width="1.5"/>
+    <g font-family="DejaVu Sans, sans-serif" font-size="24" fill="#9CC2B0">
+      <text x="72" y="540" font-family="DejaVu Sans Mono, monospace" font-size="48" fill="#F7F4EE">${p.stats.countedJobs}</text><text x="72" y="578">confirmed jobs</text>
+      <text x="320" y="540" font-family="DejaVu Sans Mono, monospace" font-size="48" fill="#F7F4EE">${p.stats.distinctClients}</text><text x="320" y="578">clients served</text>
+      <text x="560" y="540" font-family="DejaVu Sans Mono, monospace" font-size="48" fill="#F7F4EE">${rating}</text><text x="560" y="578">average rating</text>
+    </g>
+    <text x="1128" y="578" text-anchor="end" font-family="DejaVu Sans Mono, monospace" font-size="30" letter-spacing="5" fill="#F7F4EE">${esc(p.code)}</text></svg>`;
+  return sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toBuffer();
 }

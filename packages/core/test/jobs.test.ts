@@ -86,6 +86,15 @@ describe('counting', () => {
     expect(isCountingStatus(status)).toBe(counts);
   });
 
+  it.each([
+    ['routine review after client confirmation', { clientConfirmed: true, flagged: false, disputed: false }, true],
+    ['flagged job under review', { clientConfirmed: true, flagged: true, disputed: false }, false],
+    ['disputed job under review', { clientConfirmed: false, flagged: false, disputed: true }, false],
+    ['under review without confirmation', { clientConfirmed: false, flagged: false, disputed: false }, false],
+  ])('under_review counts only for %s (PLAN Q25)', (_n, p, expected) => {
+    expect(jobCounts({ id: 'x', clientId: 'c', confirmedAt: day(1), status: 'under_review', ...p })).toBe(expected);
+  });
+
   it('disputed jobs never count unless resolved for the artisan (PLAN Q3)', () => {
     const base = { id: 'a', clientId: 'c', confirmedAt: day(1), status: 'verified' as const };
     expect(jobCounts({ ...base, disputed: true })).toBe(false);

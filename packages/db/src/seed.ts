@@ -66,7 +66,16 @@ async function seedReference() {
   console.log(`✓ ${TRADES.length} trades, ${TRADES.reduce((n, t) => n + t.units.length, 0)} competency units, ${TRADES.reduce((n, t) => n + t.jobTypes.length, 0)} job types, ${AREAS.length} areas, config v1`);
 }
 
+/** Empties every application table (keeps the migration history). Development only. */
+async function truncateAll() {
+  if (env.NODE_ENV === 'production') throw new Error('demo:reset is disabled in production');
+  const rows = await prisma.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
+  await prisma.$executeRawUnsafe(`TRUNCATE ${rows.map((r) => `"${r.tablename}"`).join(', ')} RESTART IDENTITY CASCADE`);
+  console.log(`✓ cleared ${rows.length} tables`);
+}
+
 async function main() {
+  if (process.argv.includes('--demo')) await truncateAll();
   const demo = process.argv.includes('--demo') || (await prisma.artisan.count()) === 0;
   await seedReference();
   if (!demo) {
@@ -218,7 +227,7 @@ async function seedDemo() {
     if (job.status === 'under_review' && o.review) {
       clock += 26 * 3600_000;
       const d = await reviewDetail(ctx, o.review.verifierId, jobId);
-      await submitReview(ctx, o.review.verifierId, jobId, { quality: o.review.quality, confirmedUnitIds: d.units.filter((u) => (u.aiConfidence ?? 0) >= 0.85).map((u) => u.id), removedUnitIds: [], note: o.review.quality === 'meets' ? 'Neat, safe work.' : 'Tidy the cable runs and label the breakers.' });
+      await submitReview(ctx, o.review.verifierId, jobId, { quality: o.review.quality, confirmedUnitIds: d.units.filter((u) => (u.aiConfidence ?? 0) >= 0.88).map((u) => u.id), removedUnitIds: [], note: o.review.quality === 'meets' ? 'Neat, safe work.' : 'Tidy the cable runs and label the breakers.' });
       await queue.drain();
     }
     return jobId;

@@ -93,6 +93,10 @@ export interface CountableJob {
   disputed: boolean;
   /** Admin resolved the dispute in the artisan's favour (PLAN Q3). */
   disputeResolvedForArtisan?: boolean;
+  /** The client confirmed this job (needed to count a job while it waits for routine review). */
+  clientConfirmed?: boolean;
+  /** The job has an open fraud flag. */
+  flagged?: boolean;
 }
 
 /**
@@ -100,9 +104,11 @@ export interface CountableJob {
  * for the artisan). This does not apply the same-client cap; see `selectCountedJobs`.
  */
 export function jobCounts(job: CountableJob): boolean {
-  if (!isCountingStatus(job.status)) return false;
   if (job.disputed && !job.disputeResolvedForArtisan) return false;
-  return true;
+  // PLAN Q25: a client-confirmed job picked by routine sampling keeps counting while it waits for review; a flagged
+  // or disputed job does not count until a reviewer decides.
+  if (job.status === 'under_review') return Boolean(job.clientConfirmed) && !job.flagged;
+  return isCountingStatus(job.status);
 }
 
 /**
