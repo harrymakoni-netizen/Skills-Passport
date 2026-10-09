@@ -15,7 +15,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "postinstall": "prisma generate",
-    "studio": "dotenv -e ../../.env -- prisma studio"
+    "studio": "dotenv -e ../../.env -- prisma studio",
+    "eval": "dotenv -e ../../.env -- tsx src/eval.ts"
   },
   "prisma": {
     "seed": "tsx src/seed.ts"

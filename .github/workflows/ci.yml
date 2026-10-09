@@ -1,0 +1,32 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: sp, POSTGRES_PASSWORD: sp, POSTGRES_DB: skills_passport }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U sp" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://sp:sp@localhost:5432/skills_passport
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Create test databases
+        run: |
+          PGPASSWORD=sp psql -h localhost -U sp -d skills_passport -c "CREATE DATABASE skills_passport_test"
+          PGPASSWORD=sp psql -h localhost -U sp -d skills_passport -c "CREATE DATABASE skills_passport_test_api"
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Dependency audit
+        run: pnpm audit --prod || true

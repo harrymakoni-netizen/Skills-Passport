@@ -9,7 +9,14 @@
     "lint": "eslint src test",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "templates:doc": "tsx scripts/templates-doc.ts",
+    "translations": "tsx scripts/translations.ts"
   },
-  "dependencies": { "zod": "^3.25.0" }
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0"
+  }
 }
