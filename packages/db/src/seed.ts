@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { loadEnv } from '@sp/config';
+import { fixturesDir, loadEnv } from '@sp/config';
 import { createAdapters, currentTotp, generateTotpSecret, hashPassword, perceptualHash, photoVariant, totpUri } from '@sp/adapters';
 import { DEFAULT_CONFIG, hammingDistance, seededRandom } from '@sp/core';
 import type { Prisma } from '@prisma/client';
@@ -21,10 +21,11 @@ import { InlineQueue } from './services/tasks';
 import { endorseArtisan, reviewDetail, submitReview } from './services/reviews';
 import { recalculateLevel } from './services/levels';
 import { MemoryKV } from './services/kv';
+import { databaseAdapterOverrides } from './services/serverless';
 
 const env = loadEnv();
 const prisma = getPrisma();
-const FIXTURES = join(import.meta.dirname, '../../../fixtures');
+const FIXTURES = fixturesDir();
 export const DEMO_PASSWORD = 'passport-demo-2026';
 
 async function seedReference() {
@@ -95,7 +96,7 @@ async function seedDemo() {
   };
   const queue = new InlineQueue(now);
   // Seed uses an in-memory channel so the simulator starts with clean chats.
-  const adapters = createAdapters({ ...env, MESSAGING_DRIVER: 'mock' }, null);
+  const adapters = createAdapters({ ...env, MESSAGING_DRIVER: 'mock' }, null, { storage: databaseAdapterOverrides(env, prisma).storage });
   const ctx = createServiceContext({ env, redis: null, queue, adapters, kv: new MemoryKV(() => clock), now, random: seededRandom(2026) });
   queue.setHandlers(createTaskHandlers(ctx));
   const { crypto, storage } = adapters;
@@ -295,7 +296,8 @@ async function seedDemo() {
   console.log(logins.join('\n'));
   console.log('\n  In development the login page can fill the current TOTP code for you (DEV_TOOLS=true).');
 
-  // Clean simulator chats and sessions from earlier runs.
+  // Clean simulator chats and sessions from earlier runs (serverless keeps them in tables that were just emptied).
+  if (env.RUNTIME === 'serverless') return;
   try {
     const redis = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 1500 });
     await redis.connect();

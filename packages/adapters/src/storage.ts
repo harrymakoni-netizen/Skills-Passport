@@ -18,7 +18,7 @@ export interface ObjectStorage {
   publicUrl(key: string): string;
 }
 
-function safeKey(key: string): string {
+export function safeKey(key: string): string {
   if (key.startsWith('/') || key.split(/[/\\]/).includes('..')) throw new Error(`Unsafe storage key ${key}`);
   return normalize(key);
 }
@@ -27,6 +27,26 @@ function safeKey(key: string): string {
  * Local-disk storage behind the same interface. Used when MinIO/Docker is unavailable (STORAGE_DRIVER=fs) and in tests.
  * Signed URLs point at the API's /media routes, which verify an HMAC signature.
  */
+/** HMAC-signed URLs served by the API's /media routes (used by every storage driver without native signing). */
+export function apiSignedUrls(publicBase: string, sign: (path: string, expires: number) => string) {
+  const base = publicBase.replace(/\/media$/, '');
+  return {
+    get(bucket: Bucket, key: string, ttlSec: number) {
+      const expires = Math.floor(Date.now() / 1000) + ttlSec;
+      const path = `${bucket}/${safeKey(key)}`;
+      return `${base}/media/signed/${path}?e=${expires}&s=${sign(path, expires)}`;
+    },
+    put(bucket: Bucket, key: string, ttlSec: number) {
+      const expires = Math.floor(Date.now() / 1000) + ttlSec;
+      const path = `${bucket}/${safeKey(key)}`;
+      return `${base}/media/upload/${path}?e=${expires}&s=${sign(`put:${path}`, expires)}`;
+    },
+    public(key: string) {
+      return `${publicBase}/${safeKey(key)}`;
+    },
+  };
+}
+
 export class FsStorage implements ObjectStorage {
   constructor(
     private readonly root: string,
@@ -55,18 +75,17 @@ export class FsStorage implements ObjectStorage {
   async delete(bucket: Bucket, key: string) {
     await rm(this.path(bucket, key), { force: true });
   }
+  private get urls() {
+    return apiSignedUrls(this.publicBase, this.sign);
+  }
   async signedGetUrl(bucket: Bucket, key: string, ttlSec: number) {
-    const expires = Math.floor(Date.now() / 1000) + ttlSec;
-    const path = `${bucket}/${safeKey(key)}`;
-    return `${this.publicBase.replace(/\/media$/, '')}/media/signed/${path}?e=${expires}&s=${this.sign(path, expires)}`;
+    return this.urls.get(bucket, key, ttlSec);
   }
   async signedPutUrl(bucket: Bucket, key: string, opts: { ttlSec: number }) {
-    const expires = Math.floor(Date.now() / 1000) + opts.ttlSec;
-    const path = `${bucket}/${safeKey(key)}`;
-    return `${this.publicBase.replace(/\/media$/, '')}/media/upload/${path}?e=${expires}&s=${this.sign(`put:${path}`, expires)}`;
+    return this.urls.put(bucket, key, opts.ttlSec);
   }
   publicUrl(key: string) {
-    return `${this.publicBase}/${safeKey(key)}`;
+    return this.urls.public(key);
   }
 }
 

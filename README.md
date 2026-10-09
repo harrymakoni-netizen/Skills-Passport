@@ -67,6 +67,11 @@ pnpm demo:reset    # back to a clean demo state (development only)
 pnpm --filter @sp/web screenshots   # 360 px and 1280 px screenshots of every page into docs/screenshots
 ```
 
+## Hosted demo
+
+The public demo runs on Vercel as a single project backed only by PostgreSQL (`RUNTIME=serverless`). See
+`docs/DEPLOY.md` → "Public demo on Vercel".
+
 ## Switching on real providers
 
 All external services are adapters selected by environment variables (see `.env.example`):

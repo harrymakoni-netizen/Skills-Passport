@@ -38,6 +38,40 @@ docker compose -f docker-compose.prod.yml run --rm api pnpm db:seed   # referenc
 Create the first admin with `pnpm db:seed` on staging only, or insert one through a one-off script; production should
 start without demo data. Then sign in, enrol verifiers and field agents from `/admin/people`.
 
+## Public demo on Vercel (serverless runtime)
+
+For the pitch and for judges, the whole platform runs as **one Vercel project** that needs only a PostgreSQL
+database. `RUNTIME=serverless` changes how it runs, not what it does:
+
+| Server runtime (containers) | Serverless runtime (Vercel) |
+| --- | --- |
+| `apps/api` process behind the web rewrites | The same NestJS app inside `apps/web/pages/api/[...path].ts` |
+| BullMQ queues + `apps/worker` | `queued_tasks` table; due tasks run after each API response (`waitUntil`), one drainer at a time so each chat stays in order; retries with backoff, `failed_at` = dead letter |
+| Redis key-value (sessions, windows, rate limits, locks) | `kv_entries` table |
+| S3 / MinIO buckets | `stored_objects` table (`STORAGE_DRIVER=db`), served through `/media` with signed URLs for private files |
+| Repeatable daily purge job | Vercel Cron → `/api/cron/daily` (bearer `CRON_SECRET`) |
+
+Server components call the API in-process (no network hop). Everything else (adapters, flows, rules, pages) is
+identical, and the same test suites cover the database-backed stores (`packages/db/test/serverless.test.ts`).
+
+**Project settings** (already set for `skills-passport`): root directory `apps/web`; build and install commands come
+from `apps/web/vercel.json`. The build (`scripts/vercel-build.sh`) applies migrations, seeds reference data, seeds the
+fictional demo data **only when the database is empty**, then runs `next build`. Function region `fra1` (closest
+region to the database; pick Neon's Frankfurt region).
+
+**Environment variables** (Production and Preview): `PII_ENCRYPTION_KEY`, `PHONE_HASH_PEPPER`, `JWT_SECRET`,
+`CRON_SECRET` (sensitive), `RUNTIME=serverless`, `STORAGE_DRIVER=db`, `PUBLIC_DEMO=true`, `MESSAGING_DRIVER=mock`,
+`STT_DRIVER=mock`, `LLM_DRIVER=mock`. `DATABASE_URL` and `DATABASE_URL_UNPOOLED` come from the Neon integration
+(Storage tab → Neon → connect to the project). `PUBLIC_BASE_URL` defaults to the production domain.
+
+**Reset the demo data:** empty the database (Neon console → branch reset, or drop and recreate the `public` schema)
+and redeploy; the build seeds it again.
+
+**Going live with WhatsApp** (once the number is approved): set `MESSAGING_DRIVER=whatsapp` and the four
+`WHATSAPP_*` variables, register `https://<domain>/api/webhooks/whatsapp` in Meta, set `PUBLIC_DEMO=false` and use a
+fresh database without demo data. For real pilot volumes, move objects to S3 (`STORAGE_DRIVER=s3`) and consider the
+server runtime (Redis + worker), which handles bursts and long AI calls better than per-request draining.
+
 ## Before go-live checklist
 
 - [ ] WhatsApp Business verification, number and approved templates (en, sn, nd)

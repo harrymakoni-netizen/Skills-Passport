@@ -32,5 +32,8 @@
     "supertest": "^7.1.0",
     "@types/supertest": "^6.0.3",
     "tsx": "^4.20.0"
+  },
+  "exports": {
+    "./serverless": "./src/serverless.ts"
   }
 }

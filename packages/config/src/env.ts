@@ -28,7 +28,21 @@ export const envSchema = z.object({
   PHONE_HASH_PEPPER: z.string().min(32),
   JWT_SECRET: z.string().min(32),
 
-  STORAGE_DRIVER: z.enum(['s3', 'fs']).default('s3'),
+  /**
+   * server: long-running api + worker processes with Redis and BullMQ (docker-compose, containers).
+   * serverless: one Vercel deployment; the API runs inside the web app and queue, key-value and objects live in
+   * PostgreSQL, so the only service it needs is a database.
+   */
+  RUNTIME: z.enum(['server', 'serverless']).default('server'),
+  /**
+   * Public demo build: fictional seed data, the WhatsApp simulator and demo sign-in help stay on in a production
+   * build. Never set this on a deployment that holds real people's data.
+   */
+  PUBLIC_DEMO: bool.default('false'),
+  /** Shared secret for the scheduled-task endpoint (Vercel Cron sends it as a bearer token). */
+  CRON_SECRET: z.string().min(16).optional(),
+
+  STORAGE_DRIVER: z.enum(['s3', 'fs', 'db']).default('s3'),
   STORAGE_FS_ROOT: z.string().default('.data/storage'),
   S3_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().default('us-east-1'),
@@ -89,7 +103,13 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     }
   }
   // Empty values in .env mean "not set".
-  const clean = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== undefined && v !== ''));
+  const clean: Record<string, string | undefined> = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== undefined && v !== ''));
+  // On Vercel, default the public URLs to the project's production domain (links, QR codes, media).
+  const vercelHost = clean.VERCEL_ENV === 'production' ? clean.VERCEL_PROJECT_PRODUCTION_URL : clean.VERCEL_URL;
+  if (vercelHost) {
+    clean.PUBLIC_BASE_URL ??= `https://${vercelHost}`;
+    clean.PUBLIC_MEDIA_BASE_URL ??= `${clean.PUBLIC_BASE_URL}/media`;
+  }
   const parsed = envSchema.safeParse(clean);
   if (!parsed.success) {
     const lines = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
@@ -98,12 +118,29 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const env = parsed.data;
   // Relative storage paths are anchored at the repository root (where .env lives), so every process shares them.
   if (!isAbsolute(env.STORAGE_FS_ROOT)) env.STORAGE_FS_ROOT = join(root, env.STORAGE_FS_ROOT);
-  if (env.NODE_ENV === 'production') {
+  if (env.NODE_ENV === 'production' && !env.PUBLIC_DEMO) {
     env.DEV_TOOLS = false;
     if (env.MESSAGING_DRIVER === 'mock') throw new Error('MESSAGING_DRIVER=mock is not allowed in production');
   }
   if (source === process.env) cached = env;
   return env;
+}
+
+/**
+ * Directory holding the demo fixtures (photos, voice notes). FIXTURES_DIR wins; otherwise the nearest `fixtures/`
+ * folder above the working directory, which also works inside a bundled serverless function.
+ */
+export function fixturesDir(): string {
+  if (process.env.FIXTURES_DIR) return resolve(process.env.FIXTURES_DIR);
+  let dir = resolve(process.cwd());
+  for (let i = 0; i < 6; i++) {
+    const candidate = join(dir, 'fixtures');
+    if (existsSync(join(candidate, 'photos'))) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return join(process.cwd(), 'fixtures');
 }
 
 /** For tests: forget the cached environment. */

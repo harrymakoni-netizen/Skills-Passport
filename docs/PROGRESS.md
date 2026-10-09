@@ -123,15 +123,27 @@ Then open `http://localhost:3000/dev/chat` and follow `docs/DEMO.md`, a four-min
 - Translation review: `docs/translations-review.csv` has 320 rows. Reviewed strings come back through
   `packages/core/src/i18n/reviewed.json`, via the export and import scripts in `packages/core/scripts`.
 
+### Hosting on Vercel (public demo)
+- `RUNTIME=serverless` runs the whole platform as one Vercel project that needs only PostgreSQL. The NestJS API runs
+  inside the web app (`pages/api/[...path].ts`), and server components call it in-process.
+- The queue, key-value store, simulator chats and (with `STORAGE_DRIVER=db`) stored files move to PostgreSQL tables
+  (migration `serverless_runtime`). A daily Vercel Cron job runs maintenance.
+- `PUBLIC_DEMO=true` keeps the WhatsApp simulator and demo sign-in help on in a production build. Use it with
+  fictional data only.
+- Checked locally: a production build in this mode against an empty database runs migrations, seeds the demo data,
+  serves every page and image route, and passes the full simulator journey (onboarding → job → client confirms →
+  progress message).
+- Setup is described in `docs/DEPLOY.md`.
+
 ## Test results
 
-`pnpm lint`, `pnpm typecheck` and `pnpm test` all pass. There are 365 tests:
+`pnpm lint`, `pnpm typecheck` and `pnpm test` all pass. There are 375 tests:
 
 | Suite | Tests |
 | --- | --- |
 | core | 324 |
 | adapters | 16 |
-| db (integration, real Postgres) | 16 |
+| db (integration, real Postgres) | 26 |
 | api | 9 |
 
 The production `next build` also succeeds. An end-to-end run through the simulator API covered onboarding, logging a

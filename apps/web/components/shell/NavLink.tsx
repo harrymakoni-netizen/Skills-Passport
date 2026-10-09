@@ -3,7 +3,7 @@ import { usePathname } from 'next/navigation';
 import { cx } from '@sp/ui';
 
 export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  const path = usePathname();
+  const path = usePathname() ?? '';
   const active = path === href || (href.split('/').length > 2 && path.startsWith(href));
   return (
     <a

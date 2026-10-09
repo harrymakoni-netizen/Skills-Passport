@@ -2,7 +2,8 @@
 // Encrypted columns (suffix Enc) hold AES-256-GCM ciphertext; hashed lookups (suffix Hash) are HMAC-SHA256.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -828,4 +829,58 @@ model ProductEvent {
 
   @@index([name, at])
   @@map("product_events")
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Serverless runtime (RUNTIME=serverless, e.g. Vercel): stand-ins for Redis, BullMQ and object storage so a
+// deployment needs only PostgreSQL. Unused when the platform runs as api + worker processes.
+
+/// Key-value entries with optional expiry (sessions, 24-hour windows, rate limits, locks).
+model KvEntry {
+  key       String    @id
+  value     String
+  expiresAt DateTime? @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("kv_entries")
+}
+
+/// Task queue rows, claimed with FOR UPDATE SKIP LOCKED and retried with backoff.
+model QueuedTask {
+  id          String    @id @default(uuid())
+  name        String
+  data        Json
+  dueAt       DateTime  @map("due_at")
+  jobId       String?   @unique @map("job_id")
+  attempts    Int       @default(0)
+  lockedUntil DateTime? @map("locked_until")
+  lastError   String?   @map("last_error")
+  failedAt    DateTime? @map("failed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([dueAt])
+  @@map("queued_tasks")
+}
+
+/// Object storage in the database (STORAGE_DRIVER=db). Suits a demo; use S3 for real volumes.
+model StoredObject {
+  bucket      String
+  key         String
+  data        Bytes
+  contentType String?  @map("content_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@id([bucket, key])
+  @@map("stored_objects")
+}
+
+/// Simulated WhatsApp chats for the /dev/chat simulator (mock channel only; fictional demo phones).
+model MockChatEntry {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  entry     Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([phone, id])
+  @@map("mock_chat_entries")
 }

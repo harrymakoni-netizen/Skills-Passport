@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, Res, type OnModuleInit } from '@nestjs/common';
-import type { Env } from '@sp/config';
+import { fixturesDir, type Env } from '@sp/config';
 import { normalisePhone, type InboundContent } from '@sp/core';
 import { acceptInbound, clearSession, type ServiceContext } from '@sp/db';
 import { randomUUID } from 'node:crypto';
@@ -11,7 +11,7 @@ import { Public } from '../infra/auth';
 import { parse } from '../infra/http';
 import { CTX, ENV } from '../infra/tokens';
 
-const FIXTURES = join(import.meta.dirname, '../../../../fixtures');
+const FIXTURES = fixturesDir();
 
 const contentSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), text: z.string().max(4096) }),
@@ -31,7 +31,7 @@ export class DevController implements OnModuleInit {
   constructor(@Inject(CTX) private readonly ctx: ServiceContext, @Inject(ENV) private readonly env: Env) {}
 
   onModuleInit() {
-    if (this.env.NODE_ENV === 'production' && this.env.DEV_TOOLS) throw new Error('DEV_TOOLS must be off in production');
+    if (this.env.NODE_ENV === 'production' && this.env.DEV_TOOLS && !this.env.PUBLIC_DEMO) throw new Error('DEV_TOOLS must be off in production');
   }
 
   private mock() {

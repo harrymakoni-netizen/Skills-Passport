@@ -13,6 +13,7 @@ import { MemoryKV, RedisKV, type KeyValue } from './services/kv';
 import { recalculateLevel } from './services/levels';
 import { processMedia } from './services/media';
 import { runOutbound } from './services/outbound';
+import { databaseAdapterOverrides, PgKV, PgTaskQueue } from './services/serverless';
 import type { TaskHandlers, TaskName, TaskPayloads, TaskQueue } from './services/tasks';
 import { workRequestFollowUp } from './services/workRequests';
 
@@ -76,9 +77,11 @@ export function createServiceContext(opts: {
   const prisma = getPrisma();
   return {
     prisma,
-    adapters: opts.adapters ?? createAdapters(opts.env, opts.redis),
+    adapters: opts.adapters ?? createAdapters(opts.env, opts.redis, databaseAdapterOverrides(opts.env, prisma)),
     queue: opts.queue,
-    kv: opts.kv ?? (opts.redis ? new RedisKV(opts.redis) : new MemoryKV(() => now().getTime())),
+    kv:
+      opts.kv ??
+      (opts.redis ? new RedisKV(opts.redis) : opts.env.RUNTIME === 'serverless' ? new PgKV(prisma) : new MemoryKV(() => now().getTime())),
     log: opts.log ?? createLogger({ name: 'services', level: opts.env.LOG_LEVEL }),
     now,
     random: opts.random ?? Math.random,
@@ -86,6 +89,14 @@ export function createServiceContext(opts: {
     devTools: opts.env.DEV_TOOLS,
     config: configLoader(prisma, now),
   };
+}
+
+/** One service context per serverless instance, with the database task queue wired to the task handlers. */
+export function createServerlessRuntime(env: Env, log: Logger) {
+  const queue = new PgTaskQueue(getPrisma(), log);
+  const ctx = createServiceContext({ env, redis: null, queue, log });
+  queue.setHandlers(createTaskHandlers(ctx));
+  return { ctx, queue };
 }
 
 function reviveInbound(raw: string): InboundMessage {

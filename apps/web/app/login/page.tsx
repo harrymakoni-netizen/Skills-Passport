@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { devToolsEnabled } from '@/lib/devtools';
 import { currentUser } from '@/lib/server';
 
 export const metadata: Metadata = { title: 'Sign in', robots: { index: false } };
@@ -11,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const user = await currentUser();
   const { next } = await searchParams;
   if (user) redirect(next?.startsWith('/') ? next : HOME[user.role]);
-  const dev = process.env.NODE_ENV !== 'production' && process.env.DEV_TOOLS !== 'false';
+  const dev = devToolsEnabled();
   return (
     <div className="grid min-h-dvh md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <aside className="relative hidden overflow-hidden bg-ink-900 text-paper md:flex md:flex-col md:justify-between md:p-10">

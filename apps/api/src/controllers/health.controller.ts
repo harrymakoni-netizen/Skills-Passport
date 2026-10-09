@@ -6,13 +6,14 @@ import { CTX, REDIS } from '../infra/tokens';
 
 @Controller()
 export class HealthController {
-  constructor(@Inject(CTX) private readonly ctx: ServiceContext, @Inject(REDIS) private readonly redis: Redis) {}
+  constructor(@Inject(CTX) private readonly ctx: ServiceContext, @Inject(REDIS) private readonly redis: Redis | null) {}
 
   @Public()
   @Get('health')
   async health() {
     const db = await this.ctx.prisma.$queryRaw`SELECT 1`.then(() => 'ok').catch(() => 'down');
-    const redis = await this.redis.ping().then(() => 'ok').catch(() => 'down');
-    return { status: db === 'ok' && redis === 'ok' ? 'ok' : 'degraded', db, redis, channel: this.ctx.adapters.channel.id, time: this.ctx.now().toISOString() };
+    // The serverless runtime has no Redis (queue and key-value store are in PostgreSQL).
+    const redis = this.redis ? await this.redis.ping().then(() => 'ok').catch(() => 'down') : 'not used';
+    return { status: db === 'ok' && redis !== 'down' ? 'ok' : 'degraded', db, redis, channel: this.ctx.adapters.channel.id, time: this.ctx.now().toISOString() };
   }
 }

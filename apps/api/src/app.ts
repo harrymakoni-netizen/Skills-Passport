@@ -13,7 +13,7 @@ import { ErrorFilter } from './infra/filters';
 import { CTX, ENV, REDIS } from './infra/tokens';
 
 /** Builds the Nest application (used by main.ts and tests). */
-export async function createApp(opts: { env: Env; ctx: ServiceContext; redis: Redis; log: Logger }) {
+export async function createApp(opts: { env: Env; ctx: ServiceContext; redis: Redis | null; log: Logger }) {
   const Module = createAppModule(
     [
       { provide: CTX, useValue: opts.ctx },

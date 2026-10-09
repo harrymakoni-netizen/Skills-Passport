@@ -19,11 +19,20 @@ export interface Adapters {
   signMedia: (path: string, expires: number) => string;
 }
 
+/** Implementations that live outside this package (database-backed ones in @sp/db). */
+export interface AdapterOverrides {
+  storage?: (signMedia: (path: string, expires: number) => string) => ObjectStorage;
+  mockStore?: MockStore;
+}
+
 /** Selects real or mock implementations from environment variables. Mocks are the default. */
-export function createAdapters(env: Env, redis: Redis | null): Adapters {
+export function createAdapters(env: Env, redis: Redis | null, overrides: AdapterOverrides = {}): Adapters {
   const signMedia = (path: string, expires: number) => createHmac('sha256', env.JWT_SECRET).update(`${path}:${expires}`).digest('base64url');
-  const storage: ObjectStorage =
-    env.STORAGE_DRIVER === 'fs' ? new FsStorage(env.STORAGE_FS_ROOT, env.PUBLIC_MEDIA_BASE_URL, signMedia) : new S3Storage(env);
+  let storage: ObjectStorage;
+  if (overrides.storage) storage = overrides.storage(signMedia);
+  else if (env.STORAGE_DRIVER === 'fs') storage = new FsStorage(env.STORAGE_FS_ROOT, env.PUBLIC_MEDIA_BASE_URL, signMedia);
+  else if (env.STORAGE_DRIVER === 's3') storage = new S3Storage(env);
+  else throw new Error(`STORAGE_DRIVER=${env.STORAGE_DRIVER} needs a storage implementation from @sp/db`);
 
   let channel: MessagingChannel;
   let mock: Adapters['mock'] = null;
@@ -39,7 +48,7 @@ export function createAdapters(env: Env, redis: Redis | null): Adapters {
       mediaUrl: (key) => storage.publicUrl(key),
     });
   } else {
-    const store = redis ? new RedisMockStore(redis) : new MemoryMockStore();
+    const store = overrides.mockStore ?? (redis ? new RedisMockStore(redis) : new MemoryMockStore());
     const mockChannel = new MockChannel(store, storage);
     channel = mockChannel;
     mock = { channel: mockChannel, store };
