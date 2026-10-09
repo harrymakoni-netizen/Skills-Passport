@@ -1,11 +1,11 @@
-import { Body, Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, type OnModuleInit } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, Res, type OnModuleInit } from '@nestjs/common';
 import type { Env } from '@sp/config';
 import { normalisePhone, type InboundContent } from '@sp/core';
 import { acceptInbound, clearSession, type ServiceContext } from '@sp/db';
 import { randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { Public } from '../infra/auth';
 import { parse } from '../infra/http';
@@ -57,7 +57,7 @@ export class DevController implements OnModuleInit {
   @HttpCode(200)
   async media(@Req() req: Request & { rawBody?: Buffer }) {
     const mock = this.mock();
-    const body = req.rawBody;
+    const body = req.rawBody ?? (Buffer.isBuffer(req.body) ? (req.body as Buffer) : null);
     if (!body?.length) throw new NotFoundException('Empty file');
     const mime = String(req.headers['content-type'] ?? 'application/octet-stream').split(';')[0]!;
     const id = await mock.channel.uploadSimulatorMedia(body, mime);
@@ -84,6 +84,13 @@ export class DevController implements OnModuleInit {
     this.mock();
     const list = (dir: string) => readdirSync(join(FIXTURES, dir)).filter((f) => /\.(jpg|wav)$/.test(f)).sort();
     return { photos: list('photos').map((f) => `photos/${f}`), audio: list('audio').filter((f) => !f.startsWith('consent')).map((f) => `audio/${f}`) };
+  }
+
+  @Get('fixture-file')
+  fixtureFile(@Query('path') path: string, @Res() res: Response) {
+    this.mock();
+    if (!/^(photos|audio)\/[a-z0-9-]+\.(jpg|wav)$/.test(path ?? '')) throw new NotFoundException();
+    res.set({ 'Content-Type': path.endsWith('.jpg') ? 'image/jpeg' : 'audio/wav', 'Cache-Control': 'public, max-age=3600' }).send(readFileSync(join(FIXTURES, path)));
   }
 
   @Get('mock/chat/:phone')
@@ -118,6 +125,15 @@ export class DevController implements OnModuleInit {
       await clearSession(this.ctx, p);
     }
     return { ok: true };
+  }
+
+  @Get('artisan')
+  async artisan(@Query('phone') phone: string) {
+    this.mock();
+    const p = normalisePhone(phone ?? '');
+    if (!p) return { passportCode: null };
+    const pii = await this.ctx.prisma.artisanPii.findUnique({ where: { phoneHash: this.ctx.adapters.crypto.phoneHash(p) }, include: { artisan: { select: { passportCode: true, status: true, level: true } } } });
+    return { passportCode: pii && pii.artisan.status !== 'deleted' ? pii.artisan.passportCode : null, level: pii?.artisan.level ?? null };
   }
 
   /** Lets the demo jump the clock-dependent steps (reminders, expiry) without waiting days. */

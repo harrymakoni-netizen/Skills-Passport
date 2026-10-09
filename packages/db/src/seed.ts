@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Seeds reference data (trades, competency units, job types, areas, default config) and — with --demo, or when the
  * database has no artisans — fictional demo users and artisans at different stages. Demo history is created through

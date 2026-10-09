@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import type { Logger } from '@sp/adapters';
 import { IllegalTransitionError } from '@sp/core';
 import type { Request, Response } from 'express';

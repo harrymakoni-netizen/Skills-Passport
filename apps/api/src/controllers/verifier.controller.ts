@@ -46,8 +46,10 @@ export class VerifierController {
   @Post('artisans/:id/endorse')
   @HttpCode(200)
   async endorse(@CurrentUser() u: SessionUser, @Param('id') id: string, @Body() body: unknown) {
-    const { tradeId, statement } = parse(z.object({ tradeId: z.string(), statement: z.string().min(20).max(400) }), body);
-    const e = await endorseArtisan(this.ctx, u.verifierId!, id, tradeId, statement);
+    const b = parse(z.object({ tradeId: z.string().optional(), jobId: z.string().optional(), statement: z.string().min(20).max(400) }), body);
+    const tradeId = b.tradeId ?? (b.jobId ? (await this.ctx.prisma.job.findUniqueOrThrow({ where: { id: b.jobId }, select: { tradeId: true } })).tradeId : null);
+    if (!tradeId) throw Object.assign(new Error('tradeId or jobId is required'), { status: 400 });
+    const e = await endorseArtisan(this.ctx, u.verifierId!, id, tradeId, b.statement);
     return { id: e.id };
   }
 
