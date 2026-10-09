@@ -1,4 +1,5 @@
 import { waitUntil } from '@vercel/functions';
+import type { IncomingMessage } from 'node:http';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 /*
@@ -12,6 +13,22 @@ export const config = {
   api: { bodyParser: false, externalResolver: true, responseLimit: false },
   maxDuration: 60,
 };
+
+/** Uploads are capped at 25 MB, as on the standalone API. */
+const MAX_BODY = 25 * 1024 * 1024;
+const HOP_BY_HOP = new Set(['connection', 'keep-alive', 'transfer-encoding', 'upgrade', 'content-length']);
+
+async function readBody(req: IncomingMessage): Promise<Buffer | null> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
+    size += buf.length;
+    if (size > MAX_BODY) return null;
+    chunks.push(buf);
+  }
+  return Buffer.concat(chunks);
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (process.env.RUNTIME !== 'serverless') {
@@ -39,7 +56,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  req.url = url;
-  waitUntil(new Promise<void>((resolve) => res.once('close', () => resolve())).then(() => api.drain()));
-  api.handle(req, res);
+  const body = await readBody(req);
+  if (!body) {
+    res.status(413).json({ message: 'File too large' });
+    return;
+  }
+  const out = await api.request({ method: req.method ?? 'GET', url, headers: req.headers, body, ...(req.socket?.remoteAddress ? { remoteAddress: req.socket.remoteAddress } : {}) });
+  res.statusCode = out.status;
+  for (const [k, v] of Object.entries(out.headers)) {
+    if (v === undefined || HOP_BY_HOP.has(k.toLowerCase())) continue;
+    res.setHeader(k, Array.isArray(v) ? v : String(v));
+  }
+  res.end(out.body);
+  // Due background tasks (inbound messages, media, AI, notifications) run after the response is sent.
+  waitUntil(api.drain());
 }

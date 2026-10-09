@@ -80,6 +80,9 @@ importers:
       jose:
         specifier: ^5.10.0
         version: 5.10.0
+      light-my-request:
+        specifier: ^6.6.0
+        version: 6.6.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -168,9 +171,6 @@ importers:
       ioredis:
         specifier: ^5.11.1
         version: 5.11.1
-      light-my-request:
-        specifier: ^6.6.0
-        version: 6.6.0
       lucide-react:
         specifier: ^0.511.0
         version: 0.511.0(react@19.1.9)

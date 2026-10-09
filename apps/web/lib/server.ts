@@ -9,23 +9,20 @@ const API = process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
  */
 async function apiFetch(path: string, init: RequestInit): Promise<Response> {
   if (process.env.RUNTIME !== 'serverless') return fetch(`${API}${path}`, init);
-  const [lmr, { getServerlessApi }] = await Promise.all([import('light-my-request'), import('@sp/api/serverless')]);
-  // CommonJS package: the function is the module itself when loaded as an external.
-  const inject = (typeof lmr.inject === 'function' ? lmr.inject : (lmr as unknown as { default: typeof lmr.inject }).default);
+  const { getServerlessApi } = await import('@sp/api/serverless');
   const server = await getServerlessApi();
-  const headers = Object.fromEntries(new Headers(init.headers).entries());
-  const res = await inject(server.handle, {
-    method: (init.method ?? 'GET') as 'GET',
+  const res = await server.request({
+    method: init.method ?? 'GET',
     url: path,
-    headers,
-    ...(typeof init.body === 'string' ? { payload: init.body } : {}),
+    headers: Object.fromEntries(new Headers(init.headers).entries()),
+    ...(typeof init.body === 'string' ? { body: init.body } : {}),
   });
   const out = new Headers();
   for (const [k, v] of Object.entries(res.headers)) {
     if (v === undefined) continue;
     for (const one of Array.isArray(v) ? v : [String(v)]) out.append(k, one);
   }
-  return new Response(res.statusCode === 204 || res.statusCode === 304 ? null : new Uint8Array(res.rawPayload), { status: res.statusCode, headers: out });
+  return new Response(res.status === 204 || res.status === 304 ? null : new Uint8Array(res.body), { status: res.status, headers: out });
 }
 
 export class ApiError extends Error {

@@ -29,7 +29,6 @@ const config: NextConfig = {
     'exif-reader',
     'qrcode',
     'otplib',
-    'light-my-request',
   ],
   outputFileTracingRoot: join(import.meta.dirname, '../..'),
   outputFileTracingIncludes: {

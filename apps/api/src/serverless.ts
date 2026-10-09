@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import lightMyRequest from 'light-my-request';
 import { createLogger } from '@sp/adapters';
 import { loadEnv } from '@sp/config';
 import { createServerlessRuntime } from '@sp/db';
@@ -6,9 +7,27 @@ import { createApp } from './app';
 
 type NodeHandler = (req: IncomingMessage, res: ServerResponse) => void;
 
+export interface ApiRequest {
+  method: string;
+  /** The API's own path and query (no /api prefix). */
+  url: string;
+  headers: Record<string, string | string[] | undefined>;
+  body?: Buffer | string;
+  remoteAddress?: string;
+}
+
+export interface ApiResponse {
+  status: number;
+  headers: Record<string, string | string[] | number | undefined>;
+  body: Buffer;
+}
+
 export interface ServerlessApi {
-  /** The Nest (Express) request handler; paths are the API's own (no /api prefix). */
-  handle: NodeHandler;
+  /**
+   * Runs one request through the Nest (Express) app in-process. Requests are rebuilt from plain values so Express
+   * never touches the host framework's request/response objects.
+   */
+  request(req: ApiRequest): Promise<ApiResponse>;
   /** Runs due background tasks. One drainer at a time keeps each conversation's messages in order. */
   drain(budgetMs?: number): Promise<number>;
   /** Enqueues the daily maintenance tasks (called by the scheduled-task endpoint). */
@@ -27,8 +46,21 @@ async function build(): Promise<ServerlessApi> {
   const handle = app.getHttpAdapter().getInstance() as NodeHandler;
   log.info({ channel: ctx.adapters.channel.id, devTools: env.DEV_TOOLS, runtime: env.RUNTIME }, 'serverless api ready');
 
+  // light-my-request is CommonJS: the inject function is the module itself.
+  const inject = (typeof lightMyRequest === 'function' ? lightMyRequest : (lightMyRequest as { inject: typeof lightMyRequest }).inject) as typeof lightMyRequest;
+
   return {
-    handle,
+    async request(r) {
+      const headers = Object.fromEntries(Object.entries(r.headers).filter((e): e is [string, string | string[]] => e[1] !== undefined));
+      const res = await inject(handle, {
+        method: r.method as 'GET',
+        url: r.url,
+        headers,
+        ...(r.body !== undefined && r.body.length > 0 ? { payload: r.body } : {}),
+        ...(r.remoteAddress ? { remoteAddress: r.remoteAddress } : {}),
+      });
+      return { status: res.statusCode, headers: res.headers, body: res.rawPayload };
+    },
     async drain(budgetMs = 45_000) {
       if (!(await queue.hasDue())) return 0;
       const release = await ctx.kv.lock('queue:drain', budgetMs + 15_000);

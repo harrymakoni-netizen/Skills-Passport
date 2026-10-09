@@ -34,7 +34,6 @@
     "exif-reader": "^2.0.3",
     "helmet": "^8.3.0",
     "ioredis": "^5.11.1",
-    "light-my-request": "^6.6.0",
     "lucide-react": "^0.511.0",
     "next": "15.5.26",
     "otplib": "^12.0.1",
