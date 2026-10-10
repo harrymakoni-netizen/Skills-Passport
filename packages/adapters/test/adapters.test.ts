@@ -247,3 +247,33 @@ describe('HybridChannel (MESSAGING_DRIVER=hybrid)', async () => {
     expect(sent).toContain('POST https://graph.test/waba1/message_templates');
   });
 });
+
+describe('WhatsApp setup calls (Connect to Meta)', () => {
+  const calls: { url: string; auth: string; body?: string }[] = [];
+  const wa = new WhatsAppCloudChannel({
+    graphUrl: 'https://graph.test/v21.0', phoneNumberId: '555', accessToken: 'tok', appSecret: 'sec', businessAccountId: 'waba1', mediaUrl: (k) => k,
+    fetchImpl: (async (url: string, init?: RequestInit) => {
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      calls.push({ url, auth: headers.Authorization ?? '', ...(init?.body ? { body: String(init.body) } : {}) });
+      if (url.endsWith('/app')) return new Response(JSON.stringify({ id: 'app7' }), { status: 200 });
+      if (url.includes('/555?fields=')) return new Response(JSON.stringify({ display_phone_number: '+263 77 123 4567', platform_type: 'NOT_APPLICABLE' }), { status: 200 });
+      if (url.endsWith('/555/register')) return new Response(JSON.stringify({ error: { message: 'Wrong PIN' } }), { status: 400 });
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }) as typeof fetch,
+  });
+
+  it('reads the number, finds the app and reports Graph errors', async () => {
+    expect((await wa.phoneNumberInfo()).platform_type).toBe('NOT_APPLICABLE');
+    expect(await wa.appId()).toBe('app7');
+    await expect(wa.registerPhoneNumber('000000')).rejects.toThrow('Wrong PIN');
+  });
+
+  it('subscribes the webhook with the app token and the business account with the system token', async () => {
+    await wa.subscribeWebhook('app7', 'https://sp.test/api/webhooks/whatsapp', 'vt');
+    const sub = calls.find((c) => c.url.endsWith('/app7/subscriptions'))!;
+    expect(sub.auth).toBe('Bearer app7|sec');
+    expect(JSON.parse(sub.body!)).toEqual({ object: 'whatsapp_business_account', callback_url: 'https://sp.test/api/webhooks/whatsapp', verify_token: 'vt', fields: 'messages' });
+    await wa.subscribeBusinessAccount();
+    expect(calls.find((c) => c.url.endsWith('/waba1/subscribed_apps'))!.auth).toBe('Bearer tok');
+  });
+});

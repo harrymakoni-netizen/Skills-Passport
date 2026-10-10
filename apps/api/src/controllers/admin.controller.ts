@@ -10,6 +10,7 @@ import {
   pilotReport,
   resolveDispute,
   resolveFlag,
+  connectWhatsApp,
   setFrozen,
   submitMissingTemplates,
   verifierMonthlyCounts,
@@ -218,6 +219,13 @@ export class AdminController {
   @Get('admin/whatsapp')
   whatsapp() {
     return whatsappStatus(this.ctx, { driver: this.env.MESSAGING_DRIVER, verifyTokenSet: !!this.env.WHATSAPP_VERIFY_TOKEN, businessAccountSet: !!this.env.WHATSAPP_BUSINESS_ACCOUNT_ID });
+  }
+
+  @Post('admin/whatsapp/connect')
+  @HttpCode(200)
+  connect(@CurrentUser() u: SessionUser, @Body() body: unknown) {
+    const { pin } = parse(z.object({ pin: z.string().regex(/^\d{6}$/).optional() }), body ?? {});
+    return connectWhatsApp(this.ctx, u.id, { verifyToken: this.env.WHATSAPP_VERIFY_TOKEN, ...(pin ? { pin } : {}) });
   }
 
   @Post('admin/whatsapp/templates/submit')

@@ -146,16 +146,22 @@ Then open `http://localhost:3000/dev/chat` and follow `docs/DEMO.md`, a four-min
 - Checked locally against a fake Graph API: webhook verification handshake, signed and badly signed callbacks, a
   real number getting the welcome message through the Cloud API, the full simulator journey on demo phones, admin
   sign-in with `STAFF_PASSWORD`, and submitting all 21 templates. Screenshots: `docs/screenshots/admin-whatsapp-*`.
+- **Connect to Meta** (one button on `/admin/whatsapp`): registers the number for the Cloud API with the two-step PIN,
+  points the app's webhook at this site (Meta verifies it immediately), subscribes the app to the business account
+  and submits the templates. Each step reports its own result. Tested against a fake Graph API that performs Meta's
+  callback verification.
+- `/privacy`: privacy policy written from SPEC 14 (Meta requires one before an app can go live), linked in the footer.
+  Operator name and contact email come from `OPERATOR_NAME` and `PRIVACY_CONTACT_EMAIL`.
 - Setup steps: `docs/DEPLOY.md` → "Connecting the WhatsApp number".
 
 ## Test results
 
-`pnpm lint`, `pnpm typecheck` and `pnpm test` all pass. There are 401 tests:
+`pnpm lint`, `pnpm typecheck` and `pnpm test` all pass. There are 403 tests:
 
 | Suite | Tests |
 | --- | --- |
 | core | 346 |
-| adapters | 20 |
+| adapters | 22 |
 | db (integration, real Postgres) | 26 |
 | api | 9 |
 

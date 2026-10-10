@@ -109,6 +109,18 @@ interface WaStatus {
   errors?: { code: number; title: string }[];
 }
 
+export interface PhoneNumberInfo {
+  id?: string;
+  display_phone_number?: string;
+  verified_name?: string;
+  name_status?: string;
+  quality_rating?: string;
+  /** CLOUD_API once registered; NOT_APPLICABLE before. */
+  platform_type?: string;
+  status?: string;
+  code_verification_status?: string;
+}
+
 export interface RegisteredTemplate {
   id?: string;
   name: string;
@@ -181,6 +193,48 @@ export class WhatsAppCloudChannel implements MessagingChannel {
     const json = (await res.json().catch(() => ({}))) as { id?: string; status?: string; error?: { message?: string; error_user_msg?: string } };
     if (!res.ok || !json.id) throw new Error(json.error?.error_user_msg ?? json.error?.message ?? `HTTP ${res.status}`);
     return { id: json.id, status: json.status ?? 'PENDING' };
+  }
+
+  /** GET helper for the Graph API with the system-user token. */
+  private async graph<T>(path: string, init: { method?: string; body?: Record<string, unknown>; token?: string } = {}): Promise<T> {
+    const res = await this.fetch(`${this.cfg.graphUrl}/${path}`, {
+      method: init.method ?? 'GET',
+      headers: { Authorization: `Bearer ${init.token ?? this.cfg.accessToken}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+      ...(init.body ? { body: JSON.stringify(init.body) } : {}),
+    });
+    const json = (await res.json().catch(() => ({}))) as T & { error?: { message?: string; error_user_msg?: string } };
+    if (!res.ok) throw new Error(json.error?.error_user_msg ?? json.error?.message ?? `HTTP ${res.status}`);
+    return json;
+  }
+
+  /** The business phone number as Meta sees it (name review, quality, whether it is registered for the Cloud API). */
+  phoneNumberInfo() {
+    return this.graph<PhoneNumberInfo>(`${this.cfg.phoneNumberId}?fields=display_phone_number,verified_name,name_status,quality_rating,platform_type,status,code_verification_status`);
+  }
+
+  /** Registers the number for the Cloud API. `pin` is the six-digit two-step verification PIN (set now if none). */
+  registerPhoneNumber(pin: string) {
+    return this.graph<{ success: boolean }>(`${this.cfg.phoneNumberId}/register`, { method: 'POST', body: { messaging_product: 'whatsapp', pin } });
+  }
+
+  /** The Meta app the access token belongs to. */
+  async appId(): Promise<string> {
+    const app = await this.graph<{ id: string }>('app');
+    return app.id;
+  }
+
+  /** Points the app's WhatsApp webhook at our callback URL (Meta checks it with a GET right away). */
+  subscribeWebhook(appId: string, callbackUrl: string, verifyToken: string) {
+    return this.graph<{ success: boolean }>(`${appId}/subscriptions`, {
+      method: 'POST',
+      token: `${appId}|${this.cfg.appSecret}`,
+      body: { object: 'whatsapp_business_account', callback_url: callbackUrl, verify_token: verifyToken, fields: 'messages' },
+    });
+  }
+
+  /** Lets the app receive the business account's webhooks. */
+  subscribeBusinessAccount() {
+    return this.graph<{ success: boolean }>(`${this.requireWaba()}/subscribed_apps`, { method: 'POST' });
   }
 
   private requireWaba(): string {

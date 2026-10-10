@@ -37,6 +37,9 @@ export function SiteFooter() {
           <a className="underline-offset-4 hover:underline" href="/find">
             {site.footer.links.find}
           </a>
+          <a className="underline-offset-4 hover:underline" href="/privacy">
+            {site.footer.links.privacy}
+          </a>
           <a className="underline-offset-4 hover:underline" href="/login">
             {site.footer.links.signIn}
           </a>

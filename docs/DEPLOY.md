@@ -73,24 +73,26 @@ and redeploy; the build seeds it again.
 fictional demo phones (`+26377000xxxx`) and `/dev/chat` keep working. Once real numbers are in the database the login
 page stops listing the demo accounts, and `STAFF_PASSWORD` replaces the public demo password on the next build.
 
-1. **Meta app** ([developers.facebook.com](https://developers.facebook.com) → My Apps): a Business app with the
-   WhatsApp product, and the number added under WhatsApp → API Setup. Note the **Phone number ID** and the
-   **WhatsApp Business Account ID** shown there.
+1. **Meta app** ([developers.facebook.com](https://developers.facebook.com) → My Apps → Create app → Business):
+   add the WhatsApp product, then WhatsApp → API Setup → **Add phone number**: display name, SMS or voice code, and
+   a six-digit two-step PIN (keep it). Note the **Phone number ID** and **WhatsApp Business Account ID**.
 2. **Permanent token:** Business Settings → System users → add an admin system user → assign the app and the
    WhatsApp account (full control) → Generate token with `whatsapp_business_messaging` and
    `whatsapp_business_management`. (The 24-hour token on the API Setup page works for a quick test only.)
-3. **App secret:** App settings → Basic → App secret.
-4. **Vercel → Settings → Environment Variables** (Production and Preview):
-   `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_APP_SECRET` (Sensitive), `WHATSAPP_PHONE_NUMBER_ID`,
-   `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_VERIFY_TOKEN` (any long random string), `STAFF_PASSWORD`, then
-   `MESSAGING_DRIVER=hybrid` last (the app refuses to start in hybrid mode without the WhatsApp credentials), and
-   redeploy.
-5. **Webhook:** WhatsApp → Configuration → Callback URL `https://<domain>/api/webhooks/whatsapp`, Verify token =
-   `WHATSAPP_VERIFY_TOKEN` → Verify and save → under Webhook fields, subscribe to **messages**.
-6. **Templates:** sign in as the administrator → **WhatsApp** → *Submit to Meta*. All 21 templates (7 × en/sn/nd) are
-   sent for review; the page shows their status. Client confirmations and other first messages fail until the
-   relevant template is approved; replies inside a conversation the person started work straight away.
-7. **Test:** send "Hi" to the number from your own phone. You should get the language menu within a few seconds.
+3. **App secret:** App settings → Basic → App secret. On the same page set **Privacy policy URL** to
+   `https://<domain>/privacy`, then switch the app to **Live** (Meta only sends real users' webhooks to live apps).
+4. **Vercel → Settings → Environment Variables** (Production and Preview): `WHATSAPP_ACCESS_TOKEN` and
+   `WHATSAPP_APP_SECRET` (Sensitive), `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`,
+   `WHATSAPP_VERIFY_TOKEN` (any long random string), `STAFF_PASSWORD`, optionally `OPERATOR_NAME` and
+   `PRIVACY_CONTACT_EMAIL` for the privacy page, then `MESSAGING_DRIVER=hybrid` last (the app refuses to start in
+   hybrid mode without the WhatsApp credentials), and redeploy.
+5. **Connect:** sign in as the administrator → **WhatsApp** → enter the two-step PIN if the number is not registered
+   yet → **Connect to Meta**. This registers the number, points the app's webhook at
+   `https://<domain>/api/webhooks/whatsapp` (Meta verifies it on the spot), subscribes the app to the business
+   account and submits all 21 templates (7 × en/sn/nd). Each step shows its own result; it is safe to run again.
+6. **Test:** send "Hi" to the number from your own phone. You should get the language menu within a few seconds.
+   Client confirmations and other first messages fail until Meta approves the relevant template (the page shows the
+   status); replies inside a conversation the person started work straight away.
 
 **For a pilot with real artisans only:** set `MESSAGING_DRIVER=whatsapp` and `PUBLIC_DEMO=false`, and use a fresh
 database without demo data. For real pilot volumes, move objects to S3 (`STORAGE_DRIVER=s3`) and consider the
