@@ -133,10 +133,41 @@ describe('buildTemplate', () => {
     const m = buildTemplate('client_job_confirmation', 'en', ['Tendai', 'Battery and inverter installation', '12 Nov', 'https://sp.test/c/abc'], 'conf1');
     expect(m.kind).toBe('template');
     if (m.kind !== 'template') return;
-    expect(m.preview).toBe("Skills Passport: Tendai says they did 'Battery and inverter installation' for you on 12 Nov. Was this work done?\nRate the work and see photos: https://sp.test/c/abc");
+    expect(m.preview).toBe("Skills Passport: Tendai says they did 'Battery and inverter installation' for you on 12 Nov. Was this work done?\nRate the work and see photos: https://sp.test/c/abc\nReply with a button below.");
     expect(m.buttons.map((b) => b.id)).toEqual(['cc_yes:conf1', 'cc_no:conf1', 'cc_stop:conf1']);
     expect(m.buttons[0]!.title).toBe('Yes, it was done');
     expect(buildTemplate('artisan_job_update', 'en', ['J-1', 'line\n\nbreak']).kind).toBe('template');
     expect(() => buildTemplate('artisan_job_update', 'en', ['x'])).toThrow();
+  });
+});
+
+describe('templateSubmissions (Meta approval rules)', async () => {
+  const { templateSubmissions, TEMPLATES } = await import('../src/templates');
+  const subs = templateSubmissions();
+
+  it('covers every template in every language with unique names', () => {
+    const expected = Object.values(TEMPLATES).reduce((n, t) => n + t.languages.length, 0);
+    expect(subs).toHaveLength(expected);
+    expect(new Set(subs.map((s) => s.name)).size).toBe(expected);
+    for (const s of subs) expect(s.name).toMatch(/^[a-z0-9_]{1,512}$/);
+  });
+
+  it.each(subs.map((s) => [s.name, s] as const))('%s follows Meta body and button limits', (_name, s) => {
+    const body = s.components.find((c) => c.type === 'BODY')!;
+    expect(body.type).toBe('BODY');
+    if (body.type !== 'BODY') return;
+    const vars = [...body.text.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+    // Parameters numbered 1..n in order, no gaps.
+    expect([...new Set(vars)].sort((a, b) => a - b)).toEqual(vars.map((_, i) => i + 1).slice(0, new Set(vars).size));
+    // A body may not start or end with a parameter.
+    expect(body.text.trim()).not.toMatch(/^\{\{\d+\}\}/);
+    expect(body.text.trim()).not.toMatch(/\{\{\d+\}\}$/);
+    expect(body.text.length).toBeLessThanOrEqual(1024);
+    expect(body.example?.body_text[0]).toHaveLength(new Set(vars).size);
+    const buttons = s.components.find((c) => c.type === 'BUTTONS');
+    if (buttons?.type === 'BUTTONS') {
+      expect(buttons.buttons.length).toBeLessThanOrEqual(3);
+      for (const b of buttons.buttons) expect(b.text.length).toBeLessThanOrEqual(25);
+    }
   });
 });

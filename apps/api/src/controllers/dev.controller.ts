@@ -1,6 +1,6 @@
-import { Body, Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, Res, type OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, Res, type OnModuleInit } from '@nestjs/common';
 import { fixturesDir, type Env } from '@sp/config';
-import { normalisePhone, type InboundContent } from '@sp/core';
+import { isFictionalTestPhone, normalisePhone, type InboundContent } from '@sp/core';
 import { acceptInbound, clearSession, type ServiceContext } from '@sp/db';
 import { randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -46,6 +46,8 @@ export class DevController implements OnModuleInit {
     const { from, content } = parse(z.object({ from: z.string(), content: contentSchema }), body);
     const phone = normalisePhone(from);
     if (!phone) throw new NotFoundException('Bad phone');
+    // With real WhatsApp on (hybrid), replies to real numbers would leave the simulator: keep it to demo phones.
+    if (this.ctx.adapters.channel.id === 'whatsapp' && !isFictionalTestPhone(phone)) throw new BadRequestException('The simulator only uses demo numbers (+26377000xxxx)');
     const msg = { providerMessageId: `sim-${randomUUID()}`, channel: 'mock' as const, from: phone, receivedAt: this.ctx.now(), content: content as InboundContent };
     await mock.store.append(phone, { id: msg.providerMessageId, direction: 'in', at: msg.receivedAt.toISOString(), inbound: msg.content });
     await acceptInbound(this.ctx, [msg]);

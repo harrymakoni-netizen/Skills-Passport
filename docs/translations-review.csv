@@ -382,16 +382,31 @@ I-passport yakho yirekhodi yomsebenzi weqiniso. Kayisiso isitifiketi esisemtheth
 "own.confirmed","Thanks. We'll ask the client to confirm job *{ref}*.","Tatenda. Tichabvunza mutengi kuti asimbise basa *{ref}*.","Siyabonga. Sizacela umthengi ukuthi aqinisekise umsebenzi *{ref}*."
 "own.denied","Thanks for telling us. We've stopped job *{ref}* and our team will check it.","Tatenda nekutiudza. Tamisa basa *{ref}* uye timu yedu icharitarisa.","Siyabonga ngokusitshela. Simise umsebenzi *{ref}* njalo iqembu lethu lizawuhlola."
 "tpl.client_confirmation","Skills Passport: {1} says they did '{2}' for you on {3}. Was this work done?
-Rate the work and see photos: {4}","Skills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?
-Pai mamaki uye muone mifananidzo: {4}","Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?
-Nika amamaki ubone imifanekiso: {4}"
+Rate the work and see photos: {4}
+Reply with a button below.","Skills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?
+Pai mamaki uye muone mifananidzo: {4}
+Pindurai nebhatani riri pazasi.","Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?
+Nika amamaki ubone imifanekiso: {4}
+Phendula ngenkinobho engezansi."
 "tpl.client_reminder","Reminder from Skills Passport: {1} says they did '{2}' for you on {3}. Was this work done?
-Rate the work: {4}","Chiyeuchidzo kubva kuSkills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?
-Pai mamaki: {4}","Isikhumbuzo esivela ku-Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?
-Nika amamaki: {4}"
-"tpl.artisan_job_update","Skills Passport: update on job {1}. {2}","Skills Passport: nhau dzebasa {1}. {2}","Skills Passport: okutsha ngomsebenzi {1}. {2}"
-"tpl.artisan_review_result","Skills Passport: job {1} was reviewed. {2}","Skills Passport: basa {1} raongororwa. {2}","Skills Passport: umsebenzi {1} uhloliwe. {2}"
-"tpl.artisan_work_request","Skills Passport: new work request from {1} in {2}: {3}","Skills Passport: chikumbiro chitsva chebasa kubva ku{1} mu{2}: {3}","Skills Passport: isicelo esitsha somsebenzi esivela ku-{1} e-{2}: {3}"
+Rate the work: {4}
+Reply with a button below.","Chiyeuchidzo kubva kuSkills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?
+Pai mamaki: {4}
+Pindurai nebhatani riri pazasi.","Isikhumbuzo esivela ku-Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?
+Nika amamaki: {4}
+Phendula ngenkinobho engezansi."
+"tpl.artisan_job_update","Skills Passport: update on job {1}. {2}
+Tap below to open your passport.","Skills Passport: nhau dzebasa {1}. {2}
+Dzvanyai pazasi kuti muone passport yenu.","Skills Passport: okutsha ngomsebenzi {1}. {2}
+Thinta ngezansi ukuze ubone i-passport yakho."
+"tpl.artisan_review_result","Skills Passport: job {1} was reviewed. {2}
+Tap below to open your passport.","Skills Passport: basa {1} raongororwa. {2}
+Dzvanyai pazasi kuti muone passport yenu.","Skills Passport: umsebenzi {1} uhloliwe. {2}
+Thinta ngezansi ukuze ubone i-passport yakho."
+"tpl.artisan_work_request","Skills Passport: new work request from {1} in {2}: {3}
+Reply with a button below.","Skills Passport: chikumbiro chitsva chebasa kubva ku{1} mu{2}: {3}
+Pindurai nebhatani riri pazasi.","Skills Passport: isicelo esitsha somsebenzi esivela ku-{1} e-{2}: {3}
+Phendula ngenkinobho engezansi."
 "tpl.artisan_job_ownership","Skills Passport: field agent {1} logged a '{2}' job for you ({3}). Is this your job?","Skills Passport: mumiriri {1} anyora basa re'{2}' renyu ({3}). Iri ibasa renyu here?","Skills Passport: umsebenzi wasendaweni u-{1} ubhalele wena umsebenzi we-'{2}' ({3}). Ngowakho yini?"
 "tpl.hire_follow_up","Skills Passport: did the job with {1} happen? ({2})","Skills Passport: basa na{1} rakaitika here? ({2})","Skills Passport: umsebenzi lo-{1} wenzekile yini? ({2})"
 "tpl.btn.yes_done","Yes, it was done","Hongu, rakaitwa","Yebo, wenziwe"

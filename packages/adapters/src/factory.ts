@@ -5,14 +5,17 @@ import { AnthropicLlmProvider, MockLlmProvider, MockSpeechToText, WhisperSpeechT
 import { createPiiCrypto, type PiiCrypto } from './crypto';
 import { MemoryMockStore, MockChannel, RedisMockStore, type MockStore } from './messaging/mock';
 import type { MessagingChannel } from './messaging/types';
+import { HybridChannel } from './messaging/hybrid';
 import { WhatsAppCloudChannel } from './messaging/whatsapp';
 import { FsStorage, S3Storage, type ObjectStorage } from './storage';
 
 export interface Adapters {
   storage: ObjectStorage;
   channel: MessagingChannel;
-  /** Present only when MESSAGING_DRIVER=mock. */
+  /** Present when MESSAGING_DRIVER is mock or hybrid (the simulator). */
   mock: { channel: MockChannel; store: MockStore } | null;
+  /** Present when MESSAGING_DRIVER is whatsapp or hybrid (template management in the admin console). */
+  whatsapp: WhatsAppCloudChannel | null;
   stt: SpeechToText;
   llm: LlmProvider;
   crypto: PiiCrypto;
@@ -36,23 +39,26 @@ export function createAdapters(env: Env, redis: Redis | null, overrides: Adapter
 
   let channel: MessagingChannel;
   let mock: Adapters['mock'] = null;
-  if (env.MESSAGING_DRIVER === 'whatsapp') {
+  let whatsapp: WhatsAppCloudChannel | null = null;
+  if (env.MESSAGING_DRIVER === 'whatsapp' || env.MESSAGING_DRIVER === 'hybrid') {
     if (!env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_APP_SECRET) {
-      throw new Error('MESSAGING_DRIVER=whatsapp needs WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN and WHATSAPP_APP_SECRET');
+      throw new Error(`MESSAGING_DRIVER=${env.MESSAGING_DRIVER} needs WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN and WHATSAPP_APP_SECRET`);
     }
-    channel = new WhatsAppCloudChannel({
+    whatsapp = new WhatsAppCloudChannel({
       graphUrl: env.WHATSAPP_GRAPH_URL,
       phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
       accessToken: env.WHATSAPP_ACCESS_TOKEN,
       appSecret: env.WHATSAPP_APP_SECRET,
+      ...(env.WHATSAPP_BUSINESS_ACCOUNT_ID ? { businessAccountId: env.WHATSAPP_BUSINESS_ACCOUNT_ID } : {}),
       mediaUrl: (key) => storage.publicUrl(key),
     });
-  } else {
-    const store = overrides.mockStore ?? (redis ? new RedisMockStore(redis) : new MemoryMockStore());
-    const mockChannel = new MockChannel(store, storage);
-    channel = mockChannel;
-    mock = { channel: mockChannel, store };
   }
+  if (env.MESSAGING_DRIVER === 'mock' || env.MESSAGING_DRIVER === 'hybrid') {
+    const store = overrides.mockStore ?? (redis ? new RedisMockStore(redis) : new MemoryMockStore());
+    mock = { channel: new MockChannel(store, storage), store };
+  }
+  if (env.MESSAGING_DRIVER === 'hybrid') channel = new HybridChannel(whatsapp!, mock!.channel);
+  else channel = whatsapp ?? mock!.channel;
 
   let stt: SpeechToText = new MockSpeechToText();
   if (env.STT_DRIVER === 'whisper') {
@@ -70,6 +76,7 @@ export function createAdapters(env: Env, redis: Redis | null, overrides: Adapter
     storage,
     channel,
     mock,
+    whatsapp,
     stt,
     llm,
     crypto: createPiiCrypto({ key: env.PII_ENCRYPTION_KEY, pepper: env.PHONE_HASH_PEPPER }),

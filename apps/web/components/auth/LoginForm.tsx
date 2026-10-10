@@ -12,7 +12,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 
-export function LoginForm({ next, devAccounts }: { next: string | null; devAccounts: { role: string; email: string }[] | null }) {
+export function LoginForm({ next, devAccounts, devCodeHelp = false }: { next: string | null; devAccounts: { role: string; email: string }[] | null; devCodeHelp?: boolean }) {
   const [step, setStep] = useState<'password' | 'totp' | 'enrol'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -100,7 +100,7 @@ export function LoginForm({ next, devAccounts }: { next: string | null; devAccou
           <Button type="submit" loading={busy} disabled={code.length !== 6}>
             Sign in
           </Button>
-          {devAccounts ? (
+          {devCodeHelp ? (
             <button type="button" onClick={() => void fillDevCode()} className="self-start text-sm text-ink-900 underline underline-offset-4">
               Development: fill the current code
             </button>

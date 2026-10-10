@@ -11,21 +11,24 @@ import {
   resolveDispute,
   resolveFlag,
   setFrozen,
+  submitMissingTemplates,
   verifierMonthlyCounts,
+  whatsappStatus,
   withdrawEndorsement,
   type ServiceContext,
 } from '@sp/db';
 import { z } from 'zod';
 import { Roles } from '../infra/auth';
 import { CurrentUser, parse, type SessionUser } from '../infra/http';
-import { CTX } from '../infra/tokens';
+import { CTX, ENV } from '../infra/tokens';
+import type { Env } from '@sp/config';
 
 const localized = z.object({ en: z.string().min(1).max(120), sn: z.string().max(120).optional(), nd: z.string().max(120).optional() });
 
 @Roles('admin')
 @Controller()
 export class AdminController {
-  constructor(@Inject(CTX) private readonly ctx: ServiceContext) {}
+  constructor(@Inject(CTX) private readonly ctx: ServiceContext, @Inject(ENV) private readonly env: Env) {}
 
   @Get('admin/overview')
   overview() {
@@ -209,6 +212,18 @@ export class AdminController {
     await this.ctx.prisma.verifierConflict.upsert({ where: { verifierId_artisanId: { verifierId: id, artisanId: a.id } }, create: { verifierId: id, artisanId: a.id, reason: b.reason }, update: { reason: b.reason } });
     await audit(this.ctx, u.id, 'verifier.conflict', 'verifier', id, { artisanId: a.id });
     return { ok: true };
+  }
+
+  // ---------------------------------------------------------------- WhatsApp setup
+  @Get('admin/whatsapp')
+  whatsapp() {
+    return whatsappStatus(this.ctx, { driver: this.env.MESSAGING_DRIVER, verifyTokenSet: !!this.env.WHATSAPP_VERIFY_TOKEN, businessAccountSet: !!this.env.WHATSAPP_BUSINESS_ACCOUNT_ID });
+  }
+
+  @Post('admin/whatsapp/templates/submit')
+  @HttpCode(200)
+  submitTemplates(@CurrentUser() u: SessionUser) {
+    return submitMissingTemplates(this.ctx, u.id);
   }
 
   // ---------------------------------------------------------------- audit, reports

@@ -135,14 +135,27 @@ Then open `http://localhost:3000/dev/chat` and follow `docs/DEMO.md`, a four-min
   progress message).
 - Setup is described in `docs/DEPLOY.md`.
 
+### WhatsApp number (hybrid mode)
+- `MESSAGING_DRIVER=hybrid` sends real numbers through the WhatsApp Cloud API and keeps the fictional demo phones
+  (`+26377000xxxx`) in the simulator, so the pitch backup still works. The simulator refuses real numbers.
+- `/admin/whatsapp` shows the connection checklist (mode, webhook URL, verify token, business account) and the Meta
+  review status of all 21 templates, with one-click submission. Template bodies were adjusted to Meta's rules (no
+  body ends with a variable), and a core test checks every template against those rules.
+- With real WhatsApp on, the login page no longer lists the demo accounts, and `STAFF_PASSWORD` replaces the public
+  demo password for the seeded accounts on every build.
+- Checked locally against a fake Graph API: webhook verification handshake, signed and badly signed callbacks, a
+  real number getting the welcome message through the Cloud API, the full simulator journey on demo phones, admin
+  sign-in with `STAFF_PASSWORD`, and submitting all 21 templates. Screenshots: `docs/screenshots/admin-whatsapp-*`.
+- Setup steps: `docs/DEPLOY.md` → "Connecting the WhatsApp number".
+
 ## Test results
 
-`pnpm lint`, `pnpm typecheck` and `pnpm test` all pass. There are 375 tests:
+`pnpm lint`, `pnpm typecheck` and `pnpm test` all pass. There are 401 tests:
 
 | Suite | Tests |
 | --- | --- |
-| core | 324 |
-| adapters | 16 |
+| core | 346 |
+| adapters | 20 |
 | db (integration, real Postgres) | 26 |
 | api | 9 |
 

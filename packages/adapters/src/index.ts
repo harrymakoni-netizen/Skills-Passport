@@ -8,6 +8,7 @@ export * from './factory';
 export * from './messaging/types';
 export * from './messaging/mock';
 export * from './messaging/whatsapp';
+export * from './messaging/hybrid';
 export { normalisePhone, maskPhone, isFictionalTestPhone } from '@sp/core';
 export * from './images';
 export * from './auth';

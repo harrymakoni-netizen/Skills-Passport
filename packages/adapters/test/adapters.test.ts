@@ -198,3 +198,52 @@ describe('mock AI', () => {
     expect((await stt.transcribe({ audio: Buffer.alloc(0), mimeType: 'audio/ogg' })).text).toContain('client');
   });
 });
+
+describe('HybridChannel (MESSAGING_DRIVER=hybrid)', async () => {
+  const { HybridChannel } = await import('../src/messaging/hybrid');
+  const { templateSubmissions } = await import('@sp/core');
+  const storage = new FsStorage(mkdtempSync(join(tmpdir(), 'sp-hybrid-')), 'https://cdn.test/media', () => 'sig');
+  const store = new MemoryMockStore();
+  const mock = new MockChannel(store, storage);
+  const sent: string[] = [];
+  const wa = new WhatsAppCloudChannel({
+    graphUrl: 'https://graph.test', phoneNumberId: '123', accessToken: 'tok', appSecret: 's', businessAccountId: 'waba1', mediaUrl: (k) => k,
+    fetchImpl: (async (url: string, init?: RequestInit) => {
+      sent.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.includes('/message_templates') && init?.method === 'POST') return new Response(JSON.stringify({ id: 't1', status: 'PENDING' }), { status: 200 });
+      if (url.includes('/message_templates')) return new Response(JSON.stringify({ data: [{ name: 'sp_x', language: 'en', status: 'APPROVED' }] }), { status: 200 });
+      if (url.includes('/media-')) return new Response(JSON.stringify({ url: 'https://lookaside.test/f', mime_type: 'image/jpeg' }), { status: 200 });
+      if (url.startsWith('https://lookaside.test')) return new Response(new Uint8Array([1, 2]), { status: 200 });
+      return new Response(JSON.stringify({ messages: [{ id: 'wamid.9' }] }), { status: 200 });
+    }) as typeof fetch,
+  });
+  const ch = new HybridChannel(wa, mock);
+
+  it('sends fictional demo phones to the simulator and real numbers to WhatsApp', async () => {
+    const demo = await ch.send('+263770000201', { kind: 'text', text: 'hi' });
+    expect(demo.providerMessageId).toMatch(/^mock-out-/);
+    expect((await store.list('+263770000201'))[0]!.message).toEqual({ kind: 'text', text: 'hi' });
+    const real = await ch.send('+263771234567', { kind: 'text', text: 'hi' });
+    expect(real.providerMessageId).toBe('wamid.9');
+    expect(sent).toContain('POST https://graph.test/123/messages');
+    expect(await store.list('+263771234567')).toEqual([]);
+  });
+
+  it('downloads simulator media from storage and WhatsApp media from Meta', async () => {
+    const id = await mock.uploadSimulatorMedia(Buffer.from('img'), 'image/png');
+    expect((await ch.downloadMedia(id)).mimeType).toBe('image/png');
+    expect((await ch.downloadMedia('media-123')).mimeType).toBe('image/jpeg');
+  });
+
+  it('reports as WhatsApp and uses WhatsApp webhook signatures', () => {
+    expect(ch.id).toBe('whatsapp');
+    expect(ch.verifySignature({ headers: {}, body: Buffer.from('{}') })).toBe(false);
+  });
+
+  it('lists and submits templates on the business account', async () => {
+    expect(await wa.listTemplates()).toEqual([{ name: 'sp_x', language: 'en', status: 'APPROVED' }]);
+    const first = templateSubmissions()[0]!;
+    expect(await wa.createTemplate(first)).toEqual({ id: 't1', status: 'PENDING' });
+    expect(sent).toContain('POST https://graph.test/waba1/message_templates');
+  });
+});

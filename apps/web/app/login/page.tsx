@@ -12,7 +12,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const user = await currentUser();
   const { next } = await searchParams;
   if (user) redirect(next?.startsWith('/') ? next : HOME[user.role]);
-  const dev = devToolsEnabled();
+  // Demo accounts are listed (with their shared password) only while every phone is simulated. With real WhatsApp on,
+  // the database holds real people's numbers, so sign-in details are shared privately (STAFF_PASSWORD).
+  const dev = devToolsEnabled() && (process.env.MESSAGING_DRIVER ?? 'mock') === 'mock';
   return (
     <div className="grid min-h-dvh md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <aside className="relative hidden overflow-hidden bg-ink-900 text-paper md:flex md:flex-col md:justify-between md:p-10">
@@ -30,6 +32,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <main className="flex items-center justify-center px-4 py-12">
         <LoginForm
           next={next?.startsWith('/') ? next : null}
+          devCodeHelp={devToolsEnabled()}
           devAccounts={
             dev
               ? [

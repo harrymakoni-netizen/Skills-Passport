@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import type { DeliveryEvent, InboundContent, InboundMessage, Lang, OutboundMessage } from '@sp/core';
+import type { DeliveryEvent, InboundContent, InboundMessage, Lang, OutboundMessage, TemplateSubmission } from '@sp/core';
 import { safeEqual } from '../crypto';
 import { WHATSAPP_CAPABILITIES, type MessagingChannel, type RawWebhook } from './types';
 
@@ -8,6 +8,8 @@ export interface WhatsAppConfig {
   phoneNumberId: string;
   accessToken: string;
   appSecret: string;
+  /** WhatsApp Business Account id (template management). */
+  businessAccountId?: string;
   /** Resolves storage keys to public URLs for media messages. */
   mediaUrl: (key: string) => string;
   fetchImpl?: typeof fetch;
@@ -107,6 +109,15 @@ interface WaStatus {
   errors?: { code: number; title: string }[];
 }
 
+export interface RegisteredTemplate {
+  id?: string;
+  name: string;
+  language: string;
+  status: string;
+  category?: string;
+  rejected_reason?: string;
+}
+
 /** Error codes that mean the recipient can't be reached on WhatsApp. */
 const UNDELIVERABLE_CODES = new Set([131026, 131000, 131047]);
 
@@ -142,6 +153,39 @@ export class WhatsAppCloudChannel implements MessagingChannel {
     const file = await this.fetch(url, { headers: auth });
     if (!file.ok) throw new Error(`WhatsApp media download failed (${file.status})`);
     return { data: Buffer.from(await file.arrayBuffer()), mimeType: mime_type };
+  }
+
+  /** Message templates registered on the WhatsApp Business Account, with Meta's review status. */
+  async listTemplates(): Promise<RegisteredTemplate[]> {
+    const waba = this.requireWaba();
+    const out: RegisteredTemplate[] = [];
+    let url: string | undefined = `${this.cfg.graphUrl}/${waba}/message_templates?fields=name,language,status,category,rejected_reason&limit=100`;
+    while (url) {
+      const res = await this.fetch(url, { headers: { Authorization: `Bearer ${this.cfg.accessToken}` } });
+      const json = (await res.json().catch(() => ({}))) as { data?: RegisteredTemplate[]; paging?: { next?: string }; error?: { message?: string } };
+      if (!res.ok) throw new Error(`WhatsApp template list failed (${res.status}): ${json.error?.message ?? 'unknown error'}`);
+      out.push(...(json.data ?? []));
+      url = json.paging?.next;
+    }
+    return out;
+  }
+
+  /** Submits one template for Meta's review. */
+  async createTemplate(t: TemplateSubmission): Promise<{ id: string; status: string }> {
+    const waba = this.requireWaba();
+    const res = await this.fetch(`${this.cfg.graphUrl}/${waba}/message_templates`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.cfg.accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: t.name, language: t.language, category: t.category, components: t.components }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { id?: string; status?: string; error?: { message?: string; error_user_msg?: string } };
+    if (!res.ok || !json.id) throw new Error(json.error?.error_user_msg ?? json.error?.message ?? `HTTP ${res.status}`);
+    return { id: json.id, status: json.status ?? 'PENDING' };
+  }
+
+  private requireWaba(): string {
+    if (!this.cfg.businessAccountId) throw new Error('WHATSAPP_BUSINESS_ACCOUNT_ID is not set');
+    return this.cfg.businessAccountId;
   }
 
   verifySignature(raw: RawWebhook): boolean {

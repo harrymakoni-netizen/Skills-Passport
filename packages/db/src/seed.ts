@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixturesDir, loadEnv } from '@sp/config';
-import { createAdapters, currentTotp, generateTotpSecret, hashPassword, perceptualHash, photoVariant, totpUri } from '@sp/adapters';
+import { createAdapters, createPiiCrypto, currentTotp, generateTotpSecret, hashPassword, perceptualHash, photoVariant, totpUri } from '@sp/adapters';
 import { DEFAULT_CONFIG, hammingDistance, seededRandom } from '@sp/core';
 import type { Prisma } from '@prisma/client';
 import Redis from 'ioredis';
@@ -74,15 +74,25 @@ async function truncateAll() {
   console.log(`✓ cleared ${rows.length} tables`);
 }
 
+/** Demo account emails (fictional; .test domains). */
+const DEMO_EMAILS = ['admin@skillspassport.test', 'farai.verifier@skillspassport.test', 'sipho.verifier@skillspassport.test', 'rumbi.agent@skillspassport.test', 'buyer@kuyedza.test'];
+
+/** With STAFF_PASSWORD set, the demo accounts stop using the public demo password (runs on every seed). */
+async function applyStaffPassword() {
+  if (!env.STAFF_PASSWORD) return;
+  const crypto = createPiiCrypto({ key: env.PII_ENCRYPTION_KEY, pepper: env.PHONE_HASH_PEPPER });
+  const passwordHash = await hashPassword(env.STAFF_PASSWORD);
+  const { count } = await prisma.user.updateMany({ where: { emailHash: { in: DEMO_EMAILS.map((e) => crypto.lookupHash(e)) } }, data: { passwordHash } });
+  console.log(`✓ STAFF_PASSWORD applied to ${count} demo accounts`);
+}
+
 async function main() {
   if (process.argv.includes('--demo')) await truncateAll();
   const demo = process.argv.includes('--demo') || (await prisma.artisan.count()) === 0;
   await seedReference();
-  if (!demo) {
-    console.log('Demo data already present (run pnpm demo:reset to rebuild).');
-    return;
-  }
-  await seedDemo();
+  if (demo) await seedDemo();
+  else console.log('Demo data already present (run pnpm demo:reset to rebuild).');
+  await applyStaffPassword();
 }
 
 async function seedDemo() {
@@ -292,7 +302,7 @@ async function seedDemo() {
   const summary = await prisma.artisan.findMany({ select: { passportCode: true, displayName: true, level: true, _count: { select: { jobs: true } } }, orderBy: { passportCode: 'asc' } });
   console.log('✓ demo artisans');
   for (const s of summary) console.log(`  ${s.passportCode}  ${s.displayName.padEnd(12)} ${s.level.padEnd(7)} ${s._count.jobs} jobs   ${env.PUBLIC_BASE_URL}/p/${s.passportCode}`);
-  console.log(`\n✓ demo logins (password for all: ${DEMO_PASSWORD})`);
+  console.log(`\n✓ demo logins (password for all: ${env.STAFF_PASSWORD ? 'STAFF_PASSWORD' : DEMO_PASSWORD})`);
   console.log(logins.join('\n'));
   console.log('\n  In development the login page can fill the current TOTP code for you (DEV_TOOLS=true).');
 

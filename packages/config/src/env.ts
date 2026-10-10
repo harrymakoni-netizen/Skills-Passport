@@ -39,6 +39,11 @@ export const envSchema = z.object({
    * build. Never set this on a deployment that holds real people's data.
    */
   PUBLIC_DEMO: bool.default('false'),
+  /**
+   * Password for the seeded demo staff and buyer accounts. When set, every build resets those accounts to it, so a
+   * deployment that holds real people's data does not keep the public demo password.
+   */
+  STAFF_PASSWORD: z.string().min(12).optional(),
   /** Shared secret for the scheduled-task endpoint (Vercel Cron sends it as a bearer token). */
   CRON_SECRET: z.string().min(16).optional(),
 
@@ -54,11 +59,14 @@ export const envSchema = z.object({
   /** Base URL that serves the public bucket (CDN in production). */
   PUBLIC_MEDIA_BASE_URL: z.string().url().default('http://localhost:4000/media'),
 
-  MESSAGING_DRIVER: z.enum(['mock', 'whatsapp']).default('mock'),
+  /** mock = simulator only; whatsapp = Cloud API only; hybrid = Cloud API, except fictional +26377000xxxx phones (simulator). */
+  MESSAGING_DRIVER: z.enum(['mock', 'whatsapp', 'hybrid']).default('mock'),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().optional(),
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  /** WhatsApp Business Account id; needed to list and submit message templates from the admin console. */
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
   WHATSAPP_GRAPH_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
 
   STT_DRIVER: z.enum(['mock', 'whisper']).default('mock'),

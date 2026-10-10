@@ -123,3 +123,57 @@ export function buildTemplate(key: TemplateKey, lang: Lang, params: string[], re
     preview,
   };
 }
+
+/** Example values Meta requires for each parameter when a template is submitted for approval (fictional). */
+const PARAM_EXAMPLES: Record<string, string> = {
+  artisan_first_name: 'Tendai',
+  job_type: 'Battery and inverter installation',
+  job_date: '12 Nov',
+  rating_link: 'https://skillspassport.example/c/abc123',
+  job_ref: 'J-7K2QX',
+  status_text: 'Your client confirmed the job.',
+  result_text: 'A master artisan rated the work as good.',
+  buyer_name: 'Kuyedza Builders',
+  area: 'Glen View',
+  description: 'Install a 3 kVA solar system',
+  agent_name: 'Rumbidzai',
+  other_party: 'Tendai M.',
+};
+
+/** One template in one language, in the shape the WhatsApp Cloud API's message_templates endpoint accepts. */
+export interface TemplateSubmission {
+  /** Registry key + language, for display. */
+  key: TemplateKey;
+  lang: Lang;
+  /** Name and locale as registered with Meta (chiShona/isiNdebele use a name suffix under the en locale). */
+  name: string;
+  language: string;
+  category: 'UTILITY';
+  components: (
+    | { type: 'BODY'; text: string; example?: { body_text: string[][] } }
+    | { type: 'BUTTONS'; buttons: { type: 'QUICK_REPLY'; text: string }[] }
+  )[];
+}
+
+/** Every template in every language, ready to submit to Meta for approval. */
+export function templateSubmissions(): TemplateSubmission[] {
+  const cat = catalogue as Record<string, Record<Lang, string>>;
+  const out: TemplateSubmission[] = [];
+  for (const [key, def] of Object.entries(TEMPLATES) as [TemplateKey, TemplateDef][]) {
+    for (const lang of def.languages) {
+      const text = cat[def.bodyKey]![lang].replace(/\{(\d)\}/g, '{{$1}}');
+      out.push({
+        key,
+        lang,
+        name: lang === 'en' ? def.name : `${def.name}_${lang}`,
+        language: 'en',
+        category: 'UTILITY',
+        components: [
+          { type: 'BODY', text, ...(def.params.length ? { example: { body_text: [def.params.map((p) => PARAM_EXAMPLES[p] ?? p)] } } : {}) },
+          ...(def.buttons.length ? [{ type: 'BUTTONS' as const, buttons: def.buttons.map((b) => ({ type: 'QUICK_REPLY' as const, text: cat[b.titleKey]![lang] })) }] : []),
+        ],
+      });
+    }
+  }
+  return out;
+}

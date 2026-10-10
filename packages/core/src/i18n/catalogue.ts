@@ -688,21 +688,21 @@ export const catalogue = {
 
   // ------------------------------------------------------------------ WhatsApp templates (bodies use {1}… like Meta)
   'tpl.client_confirmation': d(
-    "Skills Passport: {1} says they did '{2}' for you on {3}. Was this work done?\nRate the work and see photos: {4}",
-    "Skills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?\nPai mamaki uye muone mifananidzo: {4}",
-    "Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?\nNika amamaki ubone imifanekiso: {4}",
+    "Skills Passport: {1} says they did '{2}' for you on {3}. Was this work done?\nRate the work and see photos: {4}\nReply with a button below.",
+    "Skills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?\nPai mamaki uye muone mifananidzo: {4}\nPindurai nebhatani riri pazasi.",
+    "Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?\nNika amamaki ubone imifanekiso: {4}\nPhendula ngenkinobho engezansi.",
   ),
   'tpl.client_reminder': d(
-    "Reminder from Skills Passport: {1} says they did '{2}' for you on {3}. Was this work done?\nRate the work: {4}",
-    "Chiyeuchidzo kubva kuSkills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?\nPai mamaki: {4}",
-    "Isikhumbuzo esivela ku-Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?\nNika amamaki: {4}",
+    "Reminder from Skills Passport: {1} says they did '{2}' for you on {3}. Was this work done?\nRate the work: {4}\nReply with a button below.",
+    "Chiyeuchidzo kubva kuSkills Passport: {1} vanoti vakakuitirai '{2}' musi wa{3}. Basa iri rakaitwa here?\nPai mamaki: {4}\nPindurai nebhatani riri pazasi.",
+    "Isikhumbuzo esivela ku-Skills Passport: u-{1} uthi ukwenzele '{2}' ngo-{3}. Umsebenzi lo wenziwe yini?\nNika amamaki: {4}\nPhendula ngenkinobho engezansi.",
   ),
-  'tpl.artisan_job_update': d('Skills Passport: update on job {1}. {2}', 'Skills Passport: nhau dzebasa {1}. {2}', 'Skills Passport: okutsha ngomsebenzi {1}. {2}'),
-  'tpl.artisan_review_result': d('Skills Passport: job {1} was reviewed. {2}', 'Skills Passport: basa {1} raongororwa. {2}', 'Skills Passport: umsebenzi {1} uhloliwe. {2}'),
+  'tpl.artisan_job_update': d('Skills Passport: update on job {1}. {2}\nTap below to open your passport.', 'Skills Passport: nhau dzebasa {1}. {2}\nDzvanyai pazasi kuti muone passport yenu.', 'Skills Passport: okutsha ngomsebenzi {1}. {2}\nThinta ngezansi ukuze ubone i-passport yakho.'),
+  'tpl.artisan_review_result': d('Skills Passport: job {1} was reviewed. {2}\nTap below to open your passport.', 'Skills Passport: basa {1} raongororwa. {2}\nDzvanyai pazasi kuti muone passport yenu.', 'Skills Passport: umsebenzi {1} uhloliwe. {2}\nThinta ngezansi ukuze ubone i-passport yakho.'),
   'tpl.artisan_work_request': d(
-    'Skills Passport: new work request from {1} in {2}: {3}',
-    'Skills Passport: chikumbiro chitsva chebasa kubva ku{1} mu{2}: {3}',
-    'Skills Passport: isicelo esitsha somsebenzi esivela ku-{1} e-{2}: {3}',
+    'Skills Passport: new work request from {1} in {2}: {3}\nReply with a button below.',
+    'Skills Passport: chikumbiro chitsva chebasa kubva ku{1} mu{2}: {3}\nPindurai nebhatani riri pazasi.',
+    'Skills Passport: isicelo esitsha somsebenzi esivela ku-{1} e-{2}: {3}\nPhendula ngenkinobho engezansi.',
   ),
   'tpl.artisan_job_ownership': d(
     "Skills Passport: field agent {1} logged a '{2}' job for you ({3}). Is this your job?",
